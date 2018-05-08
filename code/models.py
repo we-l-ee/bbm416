@@ -1,6 +1,6 @@
 from image_loader import *
 from torch.autograd import Variable
-from utils import *
+from utility import *
 
 import abc
 import math
@@ -47,7 +47,6 @@ class Model:
 
         self.test_set = None
         self.test_loader = None
-
         self._test_set_len = None
         self._test_batch_size = None
 
@@ -101,7 +100,7 @@ class Model:
 
     def update_train_dataset(self, train_path='train.txt', batch_size=16):
         print("Train dataset is loading...")
-        self.train_set = Dataset.load(train_path)
+        self.train_set = DatasetText(train_path, self.labelEncoder, loader=self.image_loader)
         self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=batch_size, shuffle=True,
                                                         num_workers=0)
 
@@ -285,29 +284,45 @@ class Model:
 
 class VGGModel(Model):
 
-    def __init__(self, model_path, output_path, name, label_encoder=None, cuda=True, model=None, loss='mse',
-                 batch_norm=False):
+    def __init__(self, model_path, output_path, name, type_="11", label_encoder=None, cuda=True, model=None, loss='mse',
+                 batch_norm=True, data_loader=None, pre_trained=True):
 
-        super(VGGModel, self).__init__(model_path=model_path, output_path=output_path, name=name, label_encoder=label_encoder,
-                         cuda=cuda, loss=loss, data_loader=None)
+        super(VGGModel, self).__init__(model_path=model_path, output_path=output_path, name=name,
+                                       label_encoder=label_encoder, cuda=cuda, loss=loss, data_loader=data_loader)
 
         if model is None:
-            if batch_norm:
-                model = models.vgg16_bn(pretrained=True)
-            else:
-                model = models.vgg16(pretrained=True)
+            model = VGGModel.init_model(type_, batch_norm, pre_trained)
 
+        self.model = model
         if cuda:
-            self.model = model.cuda()
-        else:
-            self.model = model
+            self.cuda()
+
+    def cuda(self):
+        self.model = self.model.cuda()
+
+    def cpu(self):
+        self.model = self.model.cpu()
 
     @staticmethod
-    def load(loc, model_path, output_path, name, cuda, loss, args):
-        if len(args) > 0:
-            __type = args[0]
+    def init_model(type_, batch_norm=True, num_classes=1000, pre_trained=True):
+        if batch_norm:
+            type_ = type_ + "bn"
 
+        __models = {"11": models.vgg11(pretrained=pre_trained, num_classes=num_classes),
+                    "11bn": models.vgg11_bn(pretrained=pre_trained, num_classes=num_classes),
+                    "13": models.vgg13(pretrained=pre_trained, num_classes=num_classes),
+                    "13bn": models.vgg13_bn(pretrained=pre_trained, num_classes=num_classes),
+                    "16": models.vgg16(pretrained=pre_trained, num_classes=num_classes),
+                    "16bn": models.vgg16_bn(pretrained=pre_trained, num_classes=num_classes),
+                    "19": models.vgg19(pretrained=pre_trained, num_classes=num_classes),
+                    "19bn": models.vgg19_bn(pretrained=pre_trained, num_classes=num_classes)}
+
+        return __models.get(type_)
+
+    @staticmethod
+    def load(loc, type_, model_path, output_path, name, cuda, loss):
         le = LabelEncoder.load(loc + ".npy")
+
         model = models.vgg16(num_classes=le.len())
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
@@ -334,3 +349,4 @@ class VGGModel(Model):
         for param1, param2 in zip(self.model.classifier.parameters(), old.parameters()):
             if len(param1) == len(param2):
                 param1.data = param2.data
+
