@@ -1,5 +1,5 @@
 from os import path
-from our_models import *
+from models import *
 
 import argparse
 import gc
