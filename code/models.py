@@ -1,6 +1,6 @@
 from image_loader import *
 from torch.autograd import Variable
-from utility import *
+from utils import *
 
 import abc
 import math
@@ -101,7 +101,7 @@ class Model:
 
     def update_train_dataset(self, train_path='train.txt', batch_size=16):
         print("Train dataset is loading...")
-        self.train_set = DatasetText(train_path, self.labelEncoder, loader=self.image_loader)
+        self.train_set = Dataset.load(train_path)
         self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=batch_size, shuffle=True,
                                                         num_workers=0)
 
@@ -303,7 +303,10 @@ class VGGModel(Model):
             self.model = model
 
     @staticmethod
-    def load(loc, model_path, output_path, name, cuda, loss):
+    def load(loc, model_path, output_path, name, cuda, loss, args):
+        if len(args) > 0:
+            __type = args[0]
+
         le = LabelEncoder.load(loc + ".npy")
         model = models.vgg16(num_classes=le.len())
         pt = torch.load(loc + ".pt")

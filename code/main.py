@@ -17,9 +17,10 @@ def load(model_path, output_path, lname, sname, cuda, loss):
 
     loc = os.path.join(model_path, lname)
     with open(loc + ".info", 'rb') as f:
-        type_ = f.readline().strip()
+        _args  = f.readline().strip().split()
+        type_, args = _args[0], _args[1:]
     func = {b"VGGModel": VGGModel.load}
-    return func[type_](loc, model_path, output_path, sname, cuda, loss)
+    return func[type_](loc, model_path, output_path, sname, cuda, loss, args = args)
 
 
 def init(type_, model_path, output_path, name, cuda, loss, batch_norm):
@@ -149,8 +150,9 @@ def main():
                              " Default is '0' which means disabled."
                         )
 
-    parser.add_argument("-test", action='store_true',
-                        help="Enables to test.")
+    parser.add_argument("-test", type=int, default=0,
+                        help="For given value, test will be applied after that epochs. For example if the value is 1, "
+                             "it will apply test after 1 epoch. Default is 0 which means disabled.")
 
     parser.add_argument("-freeze", action='store_true',
                         help="Enables freezing -clip param will change the freezed layers."
@@ -202,15 +204,26 @@ def main():
     if args.freeze:
         model.freeze(args.clip)
 
+
+    if args.test !=0:
+        if args.test > args.train:
+            raise Exception("Tests instances can`t be bigger than epochs.")
+        _iter = int(args.train/args.test)
+        epochs = [args.test for i in range(_iter)]
+        if args.train%args.test != 0:
+            epochs.append(args.train%args.test)
+    else:
+        epochs = [args.train]
+
     if len(args.train) > 0 and args.train[0] > 0:
         model.update_train_dataset(args.ftrain, args.batch)
         model.update_test_dataset(args.ftest, args.batch)
 
-        for i, epoch in enumerate(args.train):
-            print("Training of (", i + 1, "/", len(args.train), ") with epoch [", epoch, "] initializing...")
+        for i, epoch in enumerate(epochs):
+            print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")
             model.train(epoch=epoch, lr=args.lr, momentum=args.momentum, write=True)
-            print("Testing of (", i + 1, "/", len(args.train), ") initializing...")
-            if args.test:
+            print("Testing of (", i + 1, "/", len(epochs), ") initializing...")
+            if args.test != 0:
                 model.test(write=True)
 
     elif args.test:
