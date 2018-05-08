@@ -1,5 +1,5 @@
 from os import path
-from models import *
+from our_models import *
 
 import argparse
 import gc
@@ -239,7 +239,6 @@ def main():
         plot_all(path.join(args.output_path, args.mname) + '.npy', args.figure_path, args.mname)
 
     return model
-
 
 # sys.argv.extend("-train 1 1 1 1 1 1 1 1 1 1 -load vgg-mse-10.32 -save -test -lr 0.01 -batch 32 -freeze -clip 0 26 -mname vgg-mse-10.32 -cuda".split())
 # sys.argv.extend("-train 10 10 10 -save -test -lr 0.01 -batch 16 -mname vgg-mse-full-3.0 -cuda".split())
