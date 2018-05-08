@@ -11,9 +11,6 @@ import torchvision.models as models
 import torch
 
 
-test = []
-
-
 # Model is main class which includes training, model loading, model saving, testing etc.
 # Train and test methods writes numpy data to outputs to be able to plot afterwards if it is wished.
 #
@@ -149,7 +146,6 @@ class Model:
             else:
                 prev = []
             prev.append(save)
-            test.append(save)
             np.save(curr_dir, prev)
         self.info.append(['train', [epoch, self._train_batch_size, lr, momentum, err[0], err[1]]])
 
@@ -241,7 +237,8 @@ class Model:
         inputs, targets = self.variable(inputs, labels)
 
         outputs = self.model(inputs)
-        if self.cuda: labels = labels.cuda()
+        if self.cuda:
+            labels = labels.cuda()
 
         err = self.cal_top_errors(outputs, labels)
 
@@ -304,7 +301,6 @@ class VGGModel(Model):
             self.model = model.cuda()
         else:
             self.model = model
-
 
     @staticmethod
     def load(loc, model_path, output_path, name, cuda, loss):

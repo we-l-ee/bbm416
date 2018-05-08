@@ -210,13 +210,17 @@ def main():
             print("Training of (", i + 1, "/", len(args.train), ") with epoch [", epoch, "] initializing...")
             model.train(epoch=epoch, lr=args.lr, momentum=args.momentum, write=True)
             print("Testing of (", i + 1, "/", len(args.train), ") initializing...")
-            if args.test: model.test(write=True)
+            if args.test:
+                model.test(write=True)
 
     elif args.test:
-        model.update_test_dataset(args.ftest, args.batch); model.test(write=True)
+        model.update_test_dataset(args.ftest, args.batch)
+        model.test(write=True)
 
-    if model is not None:   model.save_info()
-    if args.save: model.save()
+    if model is not None:
+        model.save_info()
+    if args.save:
+        model.save()
 
     if args.plot:
         plot_all(path.join(args.output_path, args.mname) + '.npy', args.figure_path, args.mname)
