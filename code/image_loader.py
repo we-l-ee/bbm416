@@ -62,13 +62,16 @@ class DataSetFolder(Dataset):
         self.loader = image_loader
         self.trained = []
 
-    def load(self, root):
+    def load(self, root, mode="val"):
 
         for dir in os.listdir(root):
             self.data.append(self.loader(dir))
             _, file_name = os.path.split(dir)
-            l = file_name.split("_")[3]
-            labels = [int(i) for i in l[1:-1].split(',')]
+            if mode == "val":
+                l = file_name.split("_")[3]
+                labels = [int(i)-1 for i in l[1:-1].split(',')]
+            elif mode == "test":
+                labels.append(int(file_name))
             self.label.append(labels)
 
     def __getitem__(self, item):

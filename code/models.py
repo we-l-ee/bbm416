@@ -7,6 +7,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchvision.models as models
 import torch
+from torch.nn.functional import softmax
 
 
 # Model is main class which includes training, model loading, model saving, testing etc.
@@ -61,8 +62,8 @@ class ModelOperator:
     def __variable_cuda(self, inputs, labels):
         return Variable(inputs).cuda(), Variable(labels).cuda()
 
-    def __variable(self, inputs, labels):
-        return Variable(inputs), Variable(labels)
+    def __variable(self, inputs, labels, requires_grad=True):
+        return Variable(inputs, requires_grad=requires_grad), Variable(labels, requires_grad=requires_grad)
 
     def save(self):
         self.model.save(self.loc)
@@ -152,7 +153,7 @@ class ModelOperator:
         else:
             targets = Variable(
                 torch.from_numpy(np.eye(self.model.num_labels, dtype=np.dtype(float))[targets]).float())
-        return torch.nn.functional.softmax(outputs, dim=1), targets
+        return softmax(outputs, dim=1), targets
 
     def __cross_output_target(self, outputs, targets):
         return outputs, targets
@@ -192,11 +193,22 @@ class ModelOperator:
     def update_test_dataset(self, test_path='test', batch_size=16):
         print("Test dataset is loading...")
 
-        self.model.test_data_set.load(test_path)
+        self.model.test_data_set.load(test_path, mode="test")
         self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
+
+    def predict(self, predictions, threshold):
+        indices = np.argwhere(predictions > threshold)
+        preds = len(predictions) * [None]
+        for ind in indices:
+            index, label = ind[0], ind[1]
+            if isinstance(preds[0], list):
+                preds[index].append(label)
+            else:
+                preds[index] = [label]
+        return preds
 
     def test(self, write=True):
         self.eta.set_epoch(0)
@@ -204,16 +216,19 @@ class ModelOperator:
 
         self.model.eval()
 
-        err = np.array([0, 0])
+        predictions = list()
+        ids = list()
         print("Test starting...")
         for i, data in enumerate(self.test_loader):
-            err += self.__iter_test(i, data)
-        err = 100 * err / self._test_set_len
-        self.info.append(['test', [err[0], err[1]]])
+            outputs = self.__iter_test(i, data)
+            predicts = outputs.data.cpu().numpy()
+            predicts = self.predict(predicts, 0.5)
+            predictions.extend(predicts)
+            ids.append(data[1])
 
         if write:
             curr = os.path.join(self.output_path, self.name)
-            save = {'type': 'test', 'error': err}
+            save = {'type': 'test', 'prediction': predictions}
             if os.path.isfile(curr + '.npy'):
                 prev = np.load(curr + ".npy")
                 prev = prev.tolist()
@@ -222,32 +237,26 @@ class ModelOperator:
             prev.append(save)
             np.save(curr, prev)
 
-        print("Error percentages of test [%.2f %.2f]" % (err[0], err[1]))
         print("Test ended!")
+        return np.array(predictions)
 
     def __iter_test(self, iter, data):
         self.eta.update(0, iter)
         self.eta.start()
-        inputs, labels = data
+        inputs, _ = data
 
-        inputs, targets = self.variable(inputs, labels)
-
+        inputs = Variable(inputs, requires_grad=False)
         outputs = self.model(inputs)
-        if self.cuda:
-            labels = labels.cuda()
 
-        err = self.cal_top_errors(outputs, labels)
-
+        outputs = softmax(outputs, dim=1)
         self.eta.end()
         eta = self.eta.eta()
         curr_batch = min(iter * self._test_batch_size, self._test_set_len)
-        bath_size = curr_batch - (iter - 1) * self._test_batch_size
-        err_per = 100 * err / bath_size
-        print("Testing... [%d/%d (%.2f%%)]" % (
-            curr_batch, self._test_set_len, 100 * iter / self.eta.totiter),
-              "| Error percentages [%.2f %.2f]" % (err_per[0], err_per[1]), "ETA: %.2f min" % (eta))
 
-        return err
+        print("Testing... [%d/%d (%.2f%%)]" % (
+            curr_batch, self._test_set_len, 100 * iter / self.eta.totiter), "ETA: %.2f min" % (eta))
+
+        return outputs
 
     def update_val_dataset(self, val_path='validation', batch_size=16):
         print("Test dataset is loading...")
@@ -290,7 +299,7 @@ class ModelOperator:
         self.eta.start()
         inputs, labels = data
 
-        inputs, targets = self.variable(inputs, labels)
+        inputs, targets = self.variable(inputs, labels, requires_grad=False)
 
         outputs = self.model(inputs)
         if self.cuda:
