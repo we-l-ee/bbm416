@@ -6,27 +6,32 @@ import gc
 
 import sys
 import matplotlib.pyplot as plt
-
+import numpy as np
 # Volatile variables to be used in inference only. They get rid off other variables that is used in back propagation.
 #
 gc.enable()
 
 
-def load(model_path, output_path, lname, sname, cuda, loss):
+
+def load(root, name):
     print("Model loading...")
 
-    loc = os.path.join(model_path, lname)
+    loc = os.path.join(root, name)
     with open(loc + ".info", 'rb') as f:
-        _args  = f.readline().strip().split()
+        _args = f.readline().strip().split()
         type_, args = _args[0], _args[1:]
     func = {b"VGGModel": VGGModel.load}
-    return func[type_](loc, model_path, output_path, sname, cuda, loss, args = args)
+    return func[type_](args=args)
 
 
-def init(type_, model_path, output_path, name, cuda, loss, batch_norm):
+def init(  _type, _batch_norm):
     print("Model initialization...")
-    func = {"vgg16": VGGModel}
-    return func[type_](model_path, output_path, name, cuda=cuda, loss=loss, batch_norm=batch_norm)
+    func = {"vgg11": VGGModel.init_11,
+            "vgg13": VGGModel.init_13,
+            "vgg16": VGGModel.init_16,
+            "vgg19": VGGModel.init_19
+            }
+    return func[_type]( _batch_norm)
 
 
 def plot_all(output_path, figure_folder, figname):
@@ -195,45 +200,49 @@ def main():
         except:
             pass
 
+    operator = None
     model = None
     if args.load is not None:
-        model = load(args.model_path, args.output_path, args.load, args.mname, args.cuda, args.loss);
+        model = load(args.model_path, args.name)
+
     elif (len(args.train) > 0 and args.train[0] > 0) or args.test:
-        model = init(args.type, args.model_path, args.output_path, args.mname, args.cuda, args.loss, args.batch_norm);
+        model = init(args.type, args.batch_norm)
+
+    if model is not None:
+        operator = ModelOperator(model, args.model_path, args.output_path, args.name, args.loss, args.cuda)
 
     if args.freeze:
         model.freeze(args.clip)
 
-
-    if args.test !=0:
-        if args.test > args.train:
+    if args.validation != 0:
+        if args.validation > args.train:
             raise Exception("Tests instances can`t be bigger than epochs.")
-        _iter = int(args.train/args.test)
-        epochs = [args.test for i in range(_iter)]
-        if args.train%args.test != 0:
-            epochs.append(args.train%args.test)
+        _iter = int(args.train/args.validation)
+        epochs = [args.validation for _ in range(_iter)]
+        if args.train % args.validation != 0:
+            epochs.append(args.train % args.validation)
     else:
         epochs = [args.train]
 
     if len(args.train) > 0 and args.train[0] > 0:
-        model.update_train_dataset(args.ftrain, args.batch)
-        model.update_test_dataset(args.ftest, args.batch)
+        operator.update_train_dataset(args.ftrain, args.batch)
+        operator.update_val_dataset(args.fval, args.batch)
 
         for i, epoch in enumerate(epochs):
             print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")
-            model.train(epoch=epoch, lr=args.lr, momentum=args.momentum, write=True)
-            print("Testing of (", i + 1, "/", len(epochs), ") initializing...")
-            if args.test != 0:
-                model.test(write=True)
+            operator.train(epoch=epoch, lr=args.lr, momentum=args.momentum, write=True)
+            print("Validation of (", i + 1, "/", len(epochs), ") initializing...")
+            if args.validation != 0:
+                operator.validate(write=True)
 
-    elif args.test:
-        model.update_test_dataset(args.ftest, args.batch)
-        model.test(write=True)
+    elif args.validation:
+        operator.update_val_dataset(args.fval, args.batch)
+        operator.validate(write=True)
 
-    if model is not None:
-        model.save_info()
+    if operator is not None:
+        operator.save_info()
     if args.save:
-        model.save()
+        operator.save()
 
     if args.plot:
         plot_all(path.join(args.output_path, args.mname) + '.npy', args.figure_path, args.mname)

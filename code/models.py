@@ -1,8 +1,6 @@
 from image_loader import *
 from torch.autograd import Variable
-from utility import *
-
-import abc
+from utils import *
 import math
 
 import torch.optim as optim
@@ -14,11 +12,16 @@ import torch
 # Model is main class which includes training, model loading, model saving, testing etc.
 # Train and test methods writes numpy data to outputs to be able to plot afterwards if it is wished.
 #
-class Model:
-    def __init__(self, model_path, output_path, name, loss='mse', label_encoder=None, cuda=True, data_loader=None):
+class ModelOperator:
+    def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True):
+
+        self.model = model
         self.model_path = model_path
-        self.output_path = output_path
+
         self.name = name
+        self.loc = os.path.join(self.model_path, self.name)
+
+        self.output_path = output_path
         self.eta = ETA()
         self.__set_loss(loss)
         self.cuda = cuda
@@ -28,27 +31,22 @@ class Model:
         else:
             self.variable = self.__variable
 
-        if data_loader is None:
-            data_loader = image_loader
-        self.image_loader = data_loader
-
-        if label_encoder is None:
-            label_encoder = LabelEncoder()
-        self.labelEncoder = label_encoder
-
         self.info = []
         self.is_freeze = False
         self.clip = None
 
-        self.train_set = None
-        self.train_loader = None
         self._train_batch_size = None
         self._train_set_len = None
 
-        self.test_set = None
-        self.test_loader = None
         self._test_set_len = None
         self._test_batch_size = None
+
+        self._val_set_len = None
+        self._val_batch_size = None
+
+        self.train_loader = None
+        self.test_loader = None
+        self.val_loader = None
 
         print("Model Initialized.")
 
@@ -67,9 +65,7 @@ class Model:
         return Variable(inputs), Variable(labels)
 
     def save(self):
-        loc = os.path.join(self.model_path, self.name)
-        torch.save(self.model.state_dict(), loc + ".pt")
-        self.labelEncoder.save(loc + ".npy")
+        self.model.save(self.loc)
 
     def save_info(self):
         curr = os.path.join(self.model_path, self.name)
@@ -77,7 +73,7 @@ class Model:
 
         with open(curr + '.info', 'ab') as finfo:
             if is_new:
-                finfo.write(bytes(self.__class__.__name__, 'utf-8') + b'\n')
+                finfo.write(self.model.identifier + b'\n')
 
             for action, output in self.info:
                 if action == 'train':
@@ -98,21 +94,22 @@ class Model:
                                                                     b'Error Top 5 %.2f%%' % output[1] + b'\n')
         self.info = []
 
-    def update_train_dataset(self, train_path='train.txt', batch_size=16):
+    def update_train_dataset(self, train_path='train', batch_size=16):
         print("Train dataset is loading...")
-        self.train_set = DatasetText(train_path, self.labelEncoder, loader=self.image_loader)
-        self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=batch_size, shuffle=True,
+
+        self.model.adjust_last_layer()
+        self.model.train_data_set.load(train_path)
+        self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
                                                         num_workers=0)
 
         self._train_batch_size = batch_size
-        self._train_set_len = len(self.train_set)
+        self._train_set_len = len(self.model.train_data_set)
 
     def train(self, epoch=5, lr=0.001, momentum=0.9, write=True):
         if epoch == 0:
             return
 
         print("Training starting...")
-        self.adjust_last_layer()
 
         self.eta.set_epoch(epoch)
         self.eta.set_totiter(math.ceil(self._train_set_len / self._train_batch_size))
@@ -125,10 +122,10 @@ class Model:
         errs = []
         for e in range(1, epoch + 1):
             e_loss = []
-            tot_loss = 0.0
+            total_loss = 0.0
             err = np.array([0, 0])
             for i, data in enumerate(self.train_loader):
-                tot_loss, _err = self.__iter_train(e, i + 1, data, tot_loss, optimizer, e_loss)
+                total_loss, _err = self.__iter_train(e, i + 1, data, total_loss, optimizer, e_loss)
                 err += _err
             err = 100 * err / self._train_set_len
             errs.append(err)
@@ -151,10 +148,10 @@ class Model:
     def __mse_output_target(self, outputs, targets):
         if self.cuda:
             targets = Variable(
-                torch.from_numpy(np.eye(self.labelEncoder.len(), dtype=np.dtype(float))[targets]).float()).cuda()
+                torch.from_numpy(np.eye(self.model.num_labels, dtype=np.dtype(float))[targets]).float()).cuda()
         else:
             targets = Variable(
-                torch.from_numpy(np.eye(self.labelEncoder.len(), dtype=np.dtype(float))[targets]).float())
+                torch.from_numpy(np.eye(self.model.num_labels, dtype=np.dtype(float))[targets]).float())
         return torch.nn.functional.softmax(outputs, dim=1), targets
 
     def __cross_output_target(self, outputs, targets):
@@ -192,13 +189,13 @@ class Model:
               "ETA: %.2f min" % eta)
         return tot_loss, err
 
-    def update_test_dataset(self, test_path='test.txt', batch_size=16):
+    def update_test_dataset(self, test_path='test', batch_size=16):
         print("Test dataset is loading...")
 
-        self.test_set = DatasetText(test_path, self.labelEncoder, loader=self.image_loader)
-        self.test_loader = DataLoader(self.test_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        self.model.test_data_set.load(test_path)
+        self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
-        self._test_set_len = len(self.test_set)
+        self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
 
     def test(self, write=True):
@@ -252,9 +249,65 @@ class Model:
 
         return err
 
-    @abc.abstractmethod
-    def adjust_last_layer(self):
-        raise NotImplementedError("For output layer, it must be implemented.")
+    def update_val_dataset(self, val_path='validation', batch_size=16):
+        print("Test dataset is loading...")
+
+        self.model.val_data_set.load(val_path)
+        self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
+
+        self._val_set_len = len(self.model.val_data_set)
+        self._val_batch_size = batch_size
+
+    def validate(self, write=True):
+        self.eta.set_epoch(0)
+        self.eta.set_totiter(math.ceil(self._val_set_len / self._val_batch_size))
+
+        self.model.eval()
+
+        err = np.array([0, 0])
+        print("Test starting...")
+        for i, data in enumerate(self.val_loader):
+            err += self.__iter_val(i, data)
+        err = 100 * err / self._val_set_len
+        self.info.append(['test', [err[0], err[1]]])
+
+        if write:
+            curr = os.path.join(self.output_path, self.name)
+            save = {'type': 'val', 'error': err}
+            if os.path.isfile(curr + '.npy'):
+                prev = np.load(curr + ".npy")
+                prev = prev.tolist()
+            else:
+                prev = []
+            prev.append(save)
+            np.save(curr, prev)
+
+        print("Error percentages of validation [%.2f %.2f]" % (err[0], err[1]))
+        print("Validation ended!")
+
+    def __iter_val(self, iter, data):
+        self.eta.update(0, iter)
+        self.eta.start()
+        inputs, labels = data
+
+        inputs, targets = self.variable(inputs, labels)
+
+        outputs = self.model(inputs)
+        if self.cuda:
+            labels = labels.cuda()
+
+        err = self.cal_top_errors(outputs, labels)
+
+        self.eta.end()
+        eta = self.eta.eta()
+        curr_batch = min(iter * self._val_batch_size, self._val_set_len)
+        bath_size = curr_batch - (iter - 1) * self._val_batch_size
+        err_per = 100 * err / bath_size
+        print("Testing... [%d/%d (%.2f%%)]" % (
+            curr_batch, self._test_set_len, 100 * iter / self.eta.totiter),
+              "| Error percentages [%.2f %.2f]" % (err_per[0], err_per[1]), "ETA: %.2f min" % (eta))
+
+        return err
 
     def freeze(self, ind):
         self.is_freeze = True
@@ -282,53 +335,99 @@ class Model:
         return np.array([top1, top5])
 
 
-class VGGModel(Model):
+class VGGModel(object):
 
-    def __init__(self, model_path, output_path, name, type_="11", label_encoder=None, cuda=True, model=None, loss='mse',
-                 batch_norm=True, data_loader=None, pre_trained=True):
+    vgg_models = {"11": models.vgg11,
+                  "11bn": models.vgg11_bn,
+                  "13": models.vgg13,
+                  "13bn": models.vgg13_bn,
+                  "16": models.vgg16,
+                  "16bn": models.vgg16_bn,
+                  "19": models.vgg19,
+                  "19bn": models.vgg19_bn}
 
-        super(VGGModel, self).__init__(model_path=model_path, output_path=output_path, name=name,
-                                       label_encoder=label_encoder, cuda=cuda, loss=loss, data_loader=data_loader)
+    def __init__(self, model, num_labels, parameters, data_set=None):
 
-        if model is None:
-            model = VGGModel.init_model(type_, batch_norm, pre_trained)
-
+        self.num_labels = num_labels
         self.model = model
-        if cuda:
-            self.cuda()
+        if data_set is None:
+            self.train_data_set = SubRandomDataSetFolder()
+            self.test_data_set = DataSetFolder()
+            self.val_data_set = DataSetFolder()
 
-    def cuda(self):
+        self.parameters = parameters
+
+    def to_cuda(self):
         self.model = self.model.cuda()
 
-    def cpu(self):
+    def to_cpu(self):
         self.model = self.model.cpu()
 
     @staticmethod
-    def init_model(type_, batch_norm=True, num_classes=1000, pre_trained=True):
+    def init_11(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
         if batch_norm:
-            type_ = type_ + "bn"
-
-        __models = {"11": models.vgg11(pretrained=pre_trained, num_classes=num_classes),
-                    "11bn": models.vgg11_bn(pretrained=pre_trained, num_classes=num_classes),
-                    "13": models.vgg13(pretrained=pre_trained, num_classes=num_classes),
-                    "13bn": models.vgg13_bn(pretrained=pre_trained, num_classes=num_classes),
-                    "16": models.vgg16(pretrained=pre_trained, num_classes=num_classes),
-                    "16bn": models.vgg16_bn(pretrained=pre_trained, num_classes=num_classes),
-                    "19": models.vgg19(pretrained=pre_trained, num_classes=num_classes),
-                    "19bn": models.vgg19_bn(pretrained=pre_trained, num_classes=num_classes)}
-
-        return __models.get(type_)
+            model = VGGModel.vgg_models["vgg11bn"](pre_trained=pre_trained)
+            parameters = ["vgg11bn"]
+        else:
+            model = VGGModel.vgg_models["vgg11"](pre_trained=pre_trained)
+            parameters = ["vgg11"]
+        return VGGModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def load(loc, type_, model_path, output_path, name, cuda, loss):
-        le = LabelEncoder.load(loc + ".npy")
+    def init_13(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
+        if batch_norm:
+            model = VGGModel.vgg_models["vgg13bn"](pre_trained=pre_trained)
+            parameters = ["vgg13bn"]
+        else:
+            model = VGGModel.vgg_models["vgg13"](pre_trained=pre_trained)
+            parameters = ["vgg13bn"]
+        return VGGModel(model, num_labels, parameters, data_set)
 
-        model = models.vgg16(num_classes=le.len())
+    @staticmethod
+    def init_16(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
+        if batch_norm:
+            model = VGGModel.vgg_models["vgg16bn"](pre_trained=pre_trained)
+            parameters = ["vgg16bn"]
+        else:
+            model = VGGModel.vgg_models["vgg16"](pre_trained=pre_trained)
+            parameters = ["vgg16bn"]
+        return VGGModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_19(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
+        if batch_norm:
+            model = VGGModel.vgg_models["vgg19bn"](pre_trained=pre_trained)
+            parameters = ["vgg19bn"]
+        else:
+            model = VGGModel.vgg_models["vgg19"](pre_trained=pre_trained)
+            parameters = ["vgg19"]
+
+        return VGGModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def load(args, loc):
+        num_labels = np.load(loc + ".npy")[0]
+
+        model = VGGModel.vgg_models[args[0]](pre_trained=False)
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
-        return VGGModel(model_path, output_path, name, label_encoder=le, cuda=cuda, model=model, loss=loss)
+        return VGGModel(model, num_labels, args)
 
-    def adjust_last_layer(self):
+    def identifier(self):
+        bargs = bytes()
+        for param in self.parameters[0:-1]:
+            bargs += param+b' '
+        bargs += self.parameters[-1]
+
+        return bytes(self.__class__.__name__, 'utf-8') + bargs
+
+    def save(self, loc):
+        torch.save(self.model.state_dict(), loc + ".pt")
+        np.save(loc, [self.num_labels])
+
+    def adjust_last_layer(self, mode="train", cuda=True):
+        if mode == "train":
+            label_info(self.train_data_set.get_name()+".json")
 
         old = self.model.classifier
         new = torch.nn.Sequential(
@@ -338,10 +437,10 @@ class VGGModel(Model):
             torch.nn.Linear(4096, 4096),
             torch.nn.ReLU(True),
             torch.nn.Dropout(),
-            torch.nn.Linear(4096, self.labelEncoder.len())
+            torch.nn.Linear(4096, self.num_labels)
         )
 
-        if self.cuda:
+        if cuda:
             new = new.cuda()
 
         self.model.classifier = new

@@ -34,7 +34,6 @@ class DatasetText(Dataset):
         self.loader = loader
         self.trained = []
 
-
     def load(self, path, root='Images'):
         with open(path,'r') as _in:
 
@@ -55,15 +54,38 @@ class DatasetText(Dataset):
     def __len__(self):
         return self.len
 
-class DatasetFolderSub(Dataset):
-    def __init__(self, path, n = 1000, loader=image_loader):
-        _in = open(path, 'r')
+
+class DataSetFolder(Dataset):
+    def __init__(self,  loader=image_loader):
+        self.data = []
+        self.label = []
+        self.loader = image_loader
+        self.trained = []
+
+    def load(self, root):
+
+        for dir in os.listdir(root):
+            self.data.append(self.loader(dir))
+            _, file_name = os.path.split(dir)
+            l = file_name.split("_")[3]
+            labels = [int(i) for i in l[1:-1].split(',')]
+            self.label.append(labels)
+
+    def __getitem__(self, item):
+        return self.data[item], self.label[item]
+
+    def __len__(self):
+        return self.len
+
+
+class SubRandomDataSetFolder(Dataset):
+    def __init__(self, n=1000, loader=image_loader):
         self.data = []
         self.num = n
         self.label = []
         self.loader = image_loader
         self.trained = []
-
+        self._name = None
 
     def load(self, root):
         for i in range(self.num):
@@ -73,6 +95,10 @@ class DatasetFolderSub(Dataset):
             l = fname.split("_")[3]
             labels = [int(i) for i in l[1:-1].split(',')]
             self.label.append(labels)
+        self._name = root
+
+    def get_root(self):
+        return self._name
 
     def __getitem__(self, item):
         return self.data[item], self.label[item]
