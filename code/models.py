@@ -344,17 +344,7 @@ class ModelOperator:
         return np.array([top1, top5])
 
 
-class VGGModel(object):
-
-    vgg_models = {"11": models.vgg11,
-                  "11bn": models.vgg11_bn,
-                  "13": models.vgg13,
-                  "13bn": models.vgg13_bn,
-                  "16": models.vgg16,
-                  "16bn": models.vgg16_bn,
-                  "19": models.vgg19,
-                  "19bn": models.vgg19_bn}
-
+class Model(object):
     def __init__(self, model, num_labels, parameters, data_set=None):
 
         self.num_labels = num_labels
@@ -372,56 +362,6 @@ class VGGModel(object):
     def to_cpu(self):
         self.model = self.model.cpu()
 
-    @staticmethod
-    def init_11(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
-        if batch_norm:
-            model = VGGModel.vgg_models["vgg11bn"](pre_trained=pre_trained)
-            parameters = ["vgg11bn"]
-        else:
-            model = VGGModel.vgg_models["vgg11"](pre_trained=pre_trained)
-            parameters = ["vgg11"]
-        return VGGModel(model, num_labels, parameters, data_set)
-
-    @staticmethod
-    def init_13(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
-        if batch_norm:
-            model = VGGModel.vgg_models["vgg13bn"](pre_trained=pre_trained)
-            parameters = ["vgg13bn"]
-        else:
-            model = VGGModel.vgg_models["vgg13"](pre_trained=pre_trained)
-            parameters = ["vgg13bn"]
-        return VGGModel(model, num_labels, parameters, data_set)
-
-    @staticmethod
-    def init_16(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
-        if batch_norm:
-            model = VGGModel.vgg_models["vgg16bn"](pre_trained=pre_trained)
-            parameters = ["vgg16bn"]
-        else:
-            model = VGGModel.vgg_models["vgg16"](pre_trained=pre_trained)
-            parameters = ["vgg16bn"]
-        return VGGModel(model, num_labels, parameters, data_set)
-
-    @staticmethod
-    def init_19(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
-        if batch_norm:
-            model = VGGModel.vgg_models["vgg19bn"](pre_trained=pre_trained)
-            parameters = ["vgg19bn"]
-        else:
-            model = VGGModel.vgg_models["vgg19"](pre_trained=pre_trained)
-            parameters = ["vgg19"]
-
-        return VGGModel(model, num_labels, parameters, data_set)
-
-    @staticmethod
-    def load(args, loc):
-        num_labels = np.load(loc + ".npy")[0]
-
-        model = VGGModel.vgg_models[args[0]](pre_trained=False)
-        pt = torch.load(loc + ".pt")
-        model.load_state_dict(pt)
-        return VGGModel(model, num_labels, args)
-
     def identifier(self):
         bargs = bytes()
         for param in self.parameters[0:-1]:
@@ -435,8 +375,78 @@ class VGGModel(object):
         np.save(loc, [self.num_labels])
 
     def adjust_last_layer(self, mode="train", cuda=True):
+        raise NotImplementedError("Implement adjust_last_layer method")
+
+    @staticmethod
+    def load(args, clazz, loc):
+
+        num_labels = np.load(loc + ".npy")[0]
+
+        model = clazz.models[args[0]](pre_trained=False)
+        pt = torch.load(loc + ".pt")
+        model.load_state_dict(pt)
+        return clazz(model, num_labels, args)
+
+
+class VGGModel(Model):
+
+    vgg_models = {"11": models.vgg11,
+                  "11bn": models.vgg11_bn,
+                  "13": models.vgg13,
+                  "13bn": models.vgg13_bn,
+                  "16": models.vgg16,
+                  "16bn": models.vgg16_bn,
+                  "19": models.vgg19,
+                  "19bn": models.vgg19_bn}
+
+    def __init__(self, model, num_labels, parameters, data_set=None):
+
+        super(VGGModel, self).__init__(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_11(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
+        if batch_norm:
+            model = VGGModel.vgg_models["11bn"](pre_trained=pre_trained)
+            parameters = ["11bn"]
+        else:
+            model = VGGModel.vgg_models["11"](pre_trained=pre_trained)
+            parameters = ["11"]
+        return VGGModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_13(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
+        if batch_norm:
+            model = VGGModel.vgg_models["13bn"](pre_trained=pre_trained)
+            parameters = ["13bn"]
+        else:
+            model = VGGModel.vgg_models["13"](pre_trained=pre_trained)
+            parameters = ["13bn"]
+        return VGGModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_16(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
+        if batch_norm:
+            model = VGGModel.vgg_models["16bn"](pre_trained=pre_trained)
+            parameters = ["16bn"]
+        else:
+            model = VGGModel.vgg_models["16"](pre_trained=pre_trained)
+            parameters = ["16"]
+        return VGGModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_19(num_labels=1000, batch_norm=True, pre_trained=True, data_set=None):
+        if batch_norm:
+            model = VGGModel.vgg_models["19bn"](pre_trained=pre_trained)
+            parameters = ["19bn"]
+        else:
+            model = VGGModel.vgg_models["19"](pre_trained=pre_trained)
+            parameters = ["19"]
+
+        return VGGModel(model, num_labels, parameters, data_set)
+
+    def adjust_last_layer(self, mode="train", cuda=True):
         if mode == "train":
-            label_info(self.train_data_set.get_name()+".json")
+            label_info(self.train_data_set.get_root()+".json")
 
         old = self.model.classifier
         new = torch.nn.Sequential(
@@ -458,3 +468,235 @@ class VGGModel(object):
             if len(param1) == len(param2):
                 param1.data = param2.data
 
+
+class ResNetModel(Model):
+
+    models = {"18": models.resnet18,
+              "34": models.resnet34,
+              "50": models.resnet50,
+              "101": models.resnet101,
+              "152": models.resnet152,
+             }
+
+    def __init__(self, model, num_labels, parameters, data_set=None):
+        super(ResNetModel, self).__init__(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_18(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = ResNetModel.models["18"](pre_trained=pre_trained)
+        parameters = ["18"]
+
+        return ResNetModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_34(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = ResNetModel.models["34"](pre_trained=pre_trained)
+        parameters = ["34"]
+
+        return ResNetModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_50(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = ResNetModel.models["50"](pre_trained=pre_trained)
+        parameters = ["50"]
+
+        return ResNetModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_101(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = ResNetModel.models["101"](pre_trained=pre_trained)
+        parameters = ["101"]
+
+        return ResNetModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_152(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = ResNetModel.models["152"](pre_trained=pre_trained)
+        parameters = ["152"]
+
+        return ResNetModel(model, num_labels, parameters, data_set)
+
+    def adjust_last_layer(self, mode="train", cuda=True):
+
+        if mode == "train":
+            label_info(self.train_data_set.get_root()+".json")
+
+        if self.num_labels == 1000:
+            return
+        self.model.avgpool = torch.nn.AdaptiveAvgPool2d(1)
+        num_features = self.model.fc.in_features
+        self.model.fc = torch.nn.Linear(num_features, self.num_labels)
+
+        if cuda:
+            self.model.avgpool = self.model.avgpool.cuda()
+            self.model.fc = self.model.fc.cuda()
+
+
+class DenseNetModel(Model):
+    models = {"121": models.densenet121,
+              "169": models.densenet161,
+              "201": models.densenet169,
+              "161": models.densenet201,
+              }
+
+    def __init__(self, model, num_labels, parameters, data_set=None):
+        super(DenseNetModel, self).__init__(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_121(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = DenseNetModel.models["121"](pre_trained=pre_trained)
+        parameters = ["121"]
+
+        return DenseNetModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_169(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = DenseNetModel.models["169"](pre_trained=pre_trained)
+        parameters = ["169"]
+
+        return DenseNetModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_161(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = DenseNetModel.models["161"](pre_trained=pre_trained)
+        parameters = ["161"]
+
+        return DenseNetModel(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_201(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = DenseNetModel.models["201"](pre_trained=pre_trained)
+        parameters = ["201"]
+
+        return DenseNetModel(model, num_labels, parameters, data_set)
+
+    def adjust_last_layer(self, mode="train", cuda=True):
+
+        if mode == "train":
+            label_info(self.train_data_set.get_root() + ".json")
+
+        if self.num_labels == 1000:
+            return
+        self.model.avgpool = torch.nn.AdaptiveAvgPool2d(1)
+        num_features = self.model.fc.in_features
+        self.model.fc = torch.nn.Linear(num_features, self.num_labels)
+
+        if cuda:
+            self.model.avgpool = self.model.avgpool.cuda()
+            self.model.fc = self.model.fc.cuda()
+
+
+class GoogLeNetModel(Model):
+    models = {"v3": models.inception_v3,
+              "": models.inception_v3
+              }
+
+    def __init__(self, model, num_labels, parameters, data_set=None):
+        super(GoogLeNetModel, self).__init__(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init_v3(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = GoogLeNetModel.models["v3"](pre_trained=pre_trained)
+        parameters = ["18"]
+
+        return ResNetModel(model, num_labels, parameters, data_set)
+
+    def adjust_last_layer(self, mode="train", cuda=True):
+
+        if mode == "train":
+            label_info(self.train_data_set.get_root() + ".json")
+
+        if self.num_labels == 1000:
+            return
+
+        num_features = self.model.fc.in_features
+        self.model.AuxLogits = models.inception.InceptionAux(768, self.num_labels)
+        self.model.fc = torch.nn.Linear(num_features, self.num_labels)
+
+        if cuda:
+            self.model.AuxLogits = self.model.AuxLogits.cuda()
+            self.model.fc = self.model.fc.cuda()
+
+
+class AlexNetModel(Model):
+    models = {"": models.alexnet}
+
+    def __init__(self, model, num_labels, parameters, data_set=None):
+        super(AlexNetModel, self).__init__(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = AlexNetModel.models[""](pre_trained=pre_trained)
+        parameters = [""]
+
+        return AlexNetModel(model, num_labels, parameters, data_set)
+
+    def adjust_last_layer(self, mode="train", cuda=True):
+
+        if mode == "train":
+            label_info(self.train_data_set.get_root()+".json")
+
+        old = self.model.classifier
+        new = torch.nn.Sequential(
+            torch.nn.Dropout(),
+            torch.nn.Linear(256 * 6 * 6, 4096),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Dropout(),
+            torch.nn.Linear(4096, 4096),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Linear(4096, self.num_labels),
+        )
+
+        if cuda:
+            new = new.cuda()
+
+        self.model.classifier = new
+
+        for param1, param2 in zip(self.model.classifier.parameters(), old.parameters()):
+            if len(param1) == len(param2):
+                param1.data = param2.data
+
+
+class SqueezeNet(Model):
+
+    models = {"": models.alexnet}
+
+    def __init__(self, model, num_labels, parameters, data_set=None):
+        super(SqueezeNet, self).__init__(model, num_labels, parameters, data_set)
+
+    @staticmethod
+    def init(num_labels=1000, pre_trained=True, data_set=None):
+
+        model = SqueezeNet.models[""](pre_trained=pre_trained)
+        parameters = [""]
+
+        return SqueezeNet(model, num_labels, parameters, data_set)
+
+    def adjust_last_layer(self, mode="train", cuda=True):
+
+        if mode == "train":
+            label_info(self.train_data_set.get_root() + ".json")
+
+        if self.num_labels == self.model.num_classes:
+            return
+
+        num_features = self.model.classifier[1].in_channels
+        features = list(self.model.classifier.children())
+        features[1] = torch.nn.Conv2d(num_features, self.num_labels, 1)
+        features[3] = torch.nn.AvgPool2d(14, stride=1)
+        self.model.num_classes = self.num_labels
+        self.model.classifier = torch.nn.Sequential(*features)
+
+        if cuda:
+            self.model.classifier = self.model.classifier.cuda()

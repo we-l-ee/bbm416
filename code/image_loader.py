@@ -4,6 +4,7 @@ from PIL import Image
 import os
 import random
 
+
 # Some images has alpha channel to. All converted to RGB.
 def image_loader(image_path):
     image = Image.open(image_path).convert("RGB")
@@ -59,7 +60,7 @@ class DataSetFolder(Dataset):
     def __init__(self,  loader=image_loader):
         self.data = []
         self.label = []
-        self.loader = image_loader
+        self.loader = loader
         self.trained = []
 
     def load(self, root, mode="val"):
@@ -86,7 +87,7 @@ class SubRandomDataSetFolder(Dataset):
         self.data = []
         self.num = n
         self.label = []
-        self.loader = image_loader
+        self.loader = loader
         self.trained = []
         self._name = None
 
