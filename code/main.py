@@ -24,14 +24,27 @@ def load(root, name):
     return func[type_](args=args)
 
 
-def init(  _type, _batch_norm):
+def init(_type, _batch_norm):
     print("Model initialization...")
     func = {"vgg11": VGGModel.init_11,
             "vgg13": VGGModel.init_13,
             "vgg16": VGGModel.init_16,
-            "vgg19": VGGModel.init_19
+            "vgg19": VGGModel.init_19,
+            "resnet18": ResNetModel.init_18,
+            "resnet34": ResNetModel.init_34,
+            "resnet50": ResNetModel.init_50,
+            "resnet101": ResNetModel.init_101,
+            "resnet152": ResNetModel.init_152,
+            "densenet121": DenseNetModel.init_121,
+            "densenet161": DenseNetModel.init_161,
+            "densenet169": DenseNetModel.init_169,
+            "densenet201": DenseNetModel.init_201,
+            "googlenet": GoogLeNetModel.init_v3,
+            "googlenetv3": GoogLeNetModel.init_v3,
+            "alexnet": AlexNetModel.init,
+            "squeezenet": SqueezeNet.init
             }
-    return func[_type]( _batch_norm)
+    return func[_type](_batch_norm)
 
 
 def plot_all(output_path, figure_folder, figname):
