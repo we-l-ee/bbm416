@@ -1,6 +1,5 @@
 from os import path
 from models import *
-from cnns import *
 
 import argparse
 import gc
@@ -254,17 +253,17 @@ def main():
 
     if args.train > 0:
         operator.update_train_dataset(args.ftrain, args.batch)
-        operator.update_val_dataset(args.fval, args.batch)
+        if args.validation != 0: operator.update_val_dataset(args.fval, args.batch)
 
         for i, epoch in enumerate(epochs):
             print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")
             operator.train(epoch=epoch, lr=args.lr, momentum=args.momentum, write=True)
-            print("Validation of (", i + 1, "/", len(epochs), ") initializing...")
             if args.validation != 0:
+                print("Validation of (", i + 1, "/", len(epochs), ") initializing...")
                 operator.validate(write=True)
 
     elif args.test:
-        operator.update_test_dataset(args.fval, args.batch)
+        operator.update_test_dataset(args.ftest, args.batch)
         preds, ids = operator.test(write=True)
 
     if operator is not None:

@@ -115,9 +115,9 @@ class ModelOperator:
         self.eta.set_epoch(epoch)
         self.eta.set_totiter(math.ceil(self._train_set_len / self._train_batch_size))
 
-        self.model.train()
+        self.model.model.train()
 
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr, momentum=momentum)
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.model.model.parameters()), lr=lr, momentum=momentum)
 
         losses = []
         errs = []
@@ -167,7 +167,7 @@ class ModelOperator:
 
         optimizer.zero_grad()
 
-        outputs = self.model(inputs)
+        outputs = self.model.model(inputs)
 
         err = self.cal_top_errors(outputs, targets)
 
@@ -215,7 +215,7 @@ class ModelOperator:
         self.eta.set_epoch(0)
         self.eta.set_totiter(math.ceil(self._test_set_len / self._test_batch_size))
 
-        self.model.eval()
+        self.model.model.eval()
 
         predictions = list()
         ids = list()
@@ -247,7 +247,7 @@ class ModelOperator:
         inputs, _ = data
 
         inputs = Variable(inputs, requires_grad=False)
-        outputs = self.model(inputs)
+        outputs = self.model.model(inputs)
 
         self.eta.end()
         eta = self.eta.eta()
@@ -259,7 +259,7 @@ class ModelOperator:
         return outputs
 
     def update_val_dataset(self, val_path='validation', batch_size=16):
-        print("Test dataset is loading...")
+        print("Validation dataset is loading...")
 
         self.model.val_data_set.load(val_path)
         self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
@@ -271,10 +271,10 @@ class ModelOperator:
         self.eta.set_epoch(0)
         self.eta.set_totiter(math.ceil(self._val_set_len / self._val_batch_size))
 
-        self.model.eval()
+        self.model.model.eval()
 
         err = np.array([0, 0])
-        print("Test starting...")
+        print("Validation starting...")
         for i, data in enumerate(self.val_loader):
             err += self.__iter_val(i, data)
         err = 100 * err / self._val_set_len
@@ -301,7 +301,7 @@ class ModelOperator:
 
         inputs, targets = self.variable(inputs, labels, requires_grad=False)
 
-        outputs = self.model(inputs)
+        outputs = self.model.model(inputs)
         if self.cuda:
             labels = labels.cuda()
 
@@ -321,7 +321,7 @@ class ModelOperator:
     def freeze(self, ind):
         self.is_freeze = True
         self.clip = ind
-        param = list(self.model.parameters())
+        param = list(self.model.model.parameters())
         if ind[1] > len(param):
             ind[1] = len(param)
 
@@ -330,7 +330,7 @@ class ModelOperator:
             print('Layer', i, param[i].size(), 'freezed.')
 
     def unfreeze(self):
-        for param in self.model.parameters():
+        for param in self.model.model.parameters():
             param.requires_grad = True
             print(param.size(), 'unfreezed.')
 
@@ -674,7 +674,7 @@ class AlexNetModel(Model):
 
 class SqueezeNetModel(Model):
 
-    models = {"": models.alexnet}
+    models = {"": models.squeezenet1_1}
 
     def __init__(self, model, num_labels, parameters, data_set=None):
         super(SqueezeNetModel, self).__init__(model, num_labels, parameters, data_set)
