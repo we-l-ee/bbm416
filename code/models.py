@@ -17,6 +17,9 @@ class ModelOperator:
     def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True):
 
         self.model = model
+        if cuda:
+            self.model.to_cuda()
+
         self.model_path = model_path
 
         self.name = name
@@ -59,8 +62,9 @@ class ModelOperator:
             self.func_target = self.__mse_output_target
             self.criterion = torch.nn.MSELoss()
 
-    def __variable_cuda(self, inputs, labels):
-        return Variable(inputs).cuda(), Variable(labels).cuda()
+    def __variable_cuda(self, inputs, labels, requires_grad=True):
+        return Variable(inputs, requires_grad=requires_grad).cuda(), \
+               Variable(labels, requires_grad=requires_grad).cuda()
 
     def __variable(self, inputs, labels, requires_grad=True):
         return Variable(inputs, requires_grad=requires_grad), Variable(labels, requires_grad=requires_grad)
@@ -147,12 +151,6 @@ class ModelOperator:
         self.info.append(['train', [epoch, self._train_batch_size, lr, momentum, err[0], err[1]]])
 
     def __mse_output_target(self, outputs, targets):
-        if self.cuda:
-            targets = Variable(
-                torch.from_numpy(np.eye(self.model.num_labels, dtype=np.dtype(float))[targets]).float()).cuda()
-        else:
-            targets = Variable(
-                torch.from_numpy(np.eye(self.model.num_labels, dtype=np.dtype(float))[targets]).float())
         return softmax(outputs, dim=1), targets
 
     def __cross_output_target(self, outputs, targets):
@@ -169,8 +167,8 @@ class ModelOperator:
 
         outputs = self.model.model(inputs)
 
-        err = self.cal_top_errors(outputs, targets)
-
+        # err = self.cal_top_errors(outputs, targets)
+        err = np.array([0, 0])
         # To get best targets for criterion method. For feature use if there is more than one loss function option.
         outputs, targets = self.func_target(outputs, targets)
 
@@ -450,7 +448,7 @@ class VGGModel(Model):
 
     def adjust_last_layer(self, mode="train", cuda=True):
         if mode == "train":
-            label_info(self.train_data_set.get_root()+".json")
+            self.num_labels = self.train_data_set.num_classes
 
         old = self.model.classifier
         new = torch.nn.Sequential(
@@ -528,7 +526,7 @@ class ResNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            label_info(self.train_data_set.get_root()+".json")
+            self.num_labels = self.train_data_set.num_classes
 
         if self.num_labels == 1000:
             return
@@ -586,7 +584,7 @@ class DenseNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            label_info(self.train_data_set.get_root() + ".json")
+            self.num_labels = self.train_data_set.num_classes
 
         if self.num_labels == 1000:
             return
@@ -618,7 +616,7 @@ class GoogLeNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            label_info(self.train_data_set.get_root() + ".json")
+            self.num_labels = self.train_data_set.num_classes
 
         if self.num_labels == 1000:
             return
@@ -649,7 +647,7 @@ class AlexNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            label_info(self.train_data_set.get_root()+".json")
+            self.num_labels = self.train_data_set.num_classes
 
         old = self.model.classifier
         new = torch.nn.Sequential(
@@ -690,15 +688,17 @@ class SqueezeNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            label_info(self.train_data_set.get_root() + ".json")
+            self.num_labels = self.train_data_set.num_classes
 
         if self.num_labels == self.model.num_classes:
             return
 
         num_features = self.model.classifier[1].in_channels
+
         features = list(self.model.classifier.children())
         features[1] = torch.nn.Conv2d(num_features, self.num_labels, 1)
-        features[3] = torch.nn.AvgPool2d(14, stride=1)
+        # features[3] = torch.nn.AvgPool2d(14, stride=1)
+
         self.model.num_classes = self.num_labels
         self.model.classifier = torch.nn.Sequential(*features)
 

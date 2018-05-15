@@ -253,7 +253,8 @@ def main():
 
     if args.train > 0:
         operator.update_train_dataset(args.ftrain, args.batch)
-        if args.validation != 0: operator.update_val_dataset(args.fval, args.batch)
+        if args.validation != 0:
+            operator.update_val_dataset(args.fval, args.batch)
 
         for i, epoch in enumerate(epochs):
             print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")

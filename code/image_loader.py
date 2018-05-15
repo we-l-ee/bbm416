@@ -3,9 +3,12 @@ from torch.utils.data import Dataset
 from PIL import Image
 import os
 import random
-
-
+import torch
+import numpy as np
+from utils import label_info
 # Some images has alpha channel to. All converted to RGB.
+
+
 def image_loader(image_path, image_size=224):
     image = Image.open(image_path).convert("RGB")
     # image = np.array(image); image = image/ np.linalg.norm(image); image = Image.fromarray(Image.)
@@ -93,16 +96,24 @@ class SubRandomDataSetFolder(Dataset):
         self.loader = loader
         self.trained = []
         self._name = None
+        self.num_classes, self.min_class, self.max_class = None, None, None
 
     def load(self, root):
+        self._name = root
+        info_label = label_info(self._name + ".json")
+        self.num_classes, self.min_class, self.max_class = len(info_label[0]), info_label[1], info_label[2]
+
         dir_list = os.listdir(root)
         for i in range(self.num):
             fname = random.choice(dir_list)
             self.data.append(self.loader(os.path.join(root, fname)))
             l = fname.split("_")[3].split('.')[0]
             labels = [int(i.strip()) for i in l[1:-1].split(',')]
-            self.label.append(labels)
-        self._name = root
+
+            temp_labels = np.zeros(self.num_classes)
+            for label in labels:
+                temp_labels[label-int(self.min_class)] = 1.0
+            self.label.append(torch.from_numpy(temp_labels))
 
     def get_root(self):
         return self._name
