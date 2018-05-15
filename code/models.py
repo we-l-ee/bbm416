@@ -98,8 +98,8 @@ class ModelOperator:
     def update_train_dataset(self, train_path='train', batch_size=16):
         print("Train dataset is loading...")
 
-        self.model.adjust_last_layer()
         self.model.train_data_set.load(train_path)
+        self.model.adjust_last_layer()
         self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
                                                         num_workers=0)
 

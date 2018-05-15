@@ -6,15 +6,15 @@ import random
 
 
 # Some images has alpha channel to. All converted to RGB.
-def image_loader(image_path, image_size=(224, 224)):
+def image_loader(image_path, image_size=224):
     image = Image.open(image_path).convert("RGB")
     # image = np.array(image); image = image/ np.linalg.norm(image); image = Image.fromarray(Image.)
     normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                       std=[0.229, 0.224, 0.225])
     trans = transforms.Compose([#transforms.Resize(imsize),
                                 transforms.RandomResizedCrop(image_size), transforms.RandomHorizontalFlip(),
-                                normalizer,
-                                transforms.ToTensor()])
+                                transforms.ToTensor(),
+                                normalizer])
 
     return trans(image)
 
@@ -69,9 +69,8 @@ class DataSetFolder(Dataset):
 
     def load(self, root, mode="val"):
 
-        for dir in os.listdir(root):
-            self.data.append(self.loader(dir))
-            _, file_name = os.path.split(dir)
+        for file_name in os.listdir(root):
+            self.data.append(self.loader(os.path.join(root,file_name)))
             if mode == "val":
                 l = file_name.split("_")[3]
                 labels = [int(i)-1 for i in l[1:-1].split(',')]
@@ -97,11 +96,10 @@ class SubRandomDataSetFolder(Dataset):
 
     def load(self, root):
         for i in range(self.num):
-            dir = random.choice(os.listdir(root))
-            self.data.append(self.loader(dir))
-            _, fname = os.path.split(dir)
-            l = fname.split("_")[3]
-            labels = [int(i) for i in l[1:-1].split(b',')]
+            fname = random.choice(os.listdir(root))
+            self.data.append(self.loader(os.path.join(root,fname)))
+            l = fname.split("_")[3].split('.')[0]
+            labels = [int(i.strip()) for i in l[1:-1].split(',')]
             self.label.append(labels)
         self._name = root
 
