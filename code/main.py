@@ -1,5 +1,6 @@
 from os import path
 from models import *
+from cnns import *
 
 import argparse
 import gc
@@ -130,6 +131,11 @@ def main():
     parser.add_argument("-ftest", default='./test',
                         help="Folder which has test data."
                              " Default is './test'."
+                        )
+
+    parser.add_argument("-fval", default='./test',
+                        help="Folder which has validation data."
+                             " Default is './validation'."
                         )
 
     parser.add_argument("-model_path", default='models',

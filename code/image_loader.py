@@ -4,18 +4,18 @@ from PIL import Image
 import os
 import random
 
+normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                  std=[0.229, 0.224, 0.225])
+
 
 # Some images has alpha channel to. All converted to RGB.
 def image_loader(image_path, image_size=224):
     image = Image.open(image_path).convert("RGB")
     # image = np.array(image); image = image/ np.linalg.norm(image); image = Image.fromarray(Image.)
-    normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                      std=[0.229, 0.224, 0.225])
-    trans = transforms.Compose([#transforms.Resize(imsize),
-                                transforms.RandomResizedCrop(image_size), transforms.RandomHorizontalFlip(),
-                                transforms.ToTensor(),
-                                normalizer])
-
+    trans = transforms.Compose([  # transforms.Resize(imsize),
+        transforms.RandomResizedCrop(image_size), transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalizer])
     return trans(image)
 
 
