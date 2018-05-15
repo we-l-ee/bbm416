@@ -4,12 +4,17 @@ from PIL import Image
 import os
 import random
 
+
 # Some images has alpha channel to. All converted to RGB.
-def image_loader(image_path):
+def image_loader(image_path, image_size=(224, 224)):
     image = Image.open(image_path).convert("RGB")
     # image = np.array(image); image = image/ np.linalg.norm(image); image = Image.fromarray(Image.)
-    imsize = (224, 224)
-    trans = transforms.Compose([transforms.Resize(imsize), transforms.ToTensor()])
+    normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                      std=[0.229, 0.224, 0.225])
+    trans = transforms.Compose([#transforms.Resize(imsize),
+                                transforms.RandomResizedCrop(image_size), transforms.RandomHorizontalFlip(),
+                                normalizer,
+                                transforms.ToTensor()])
 
     return trans(image)
 
@@ -34,7 +39,6 @@ class DatasetText(Dataset):
         self.loader = loader
         self.trained = []
 
-
     def load(self, path, root='Images'):
         with open(path,'r') as _in:
 
@@ -55,24 +59,54 @@ class DatasetText(Dataset):
     def __len__(self):
         return self.len
 
-class DatasetFolderSub(Dataset):
-    def __init__(self, path, n = 1000, loader=image_loader):
-        _in = open(path, 'r')
+
+class DataSetFolder(Dataset):
+    def __init__(self,  loader=image_loader):
+        self.data = []
+        self.label = []
+        self.loader = loader
+        self.trained = []
+
+    def load(self, root, mode="val"):
+
+        for dir in os.listdir(root):
+            self.data.append(self.loader(dir))
+            _, file_name = os.path.split(dir)
+            if mode == "val":
+                l = file_name.split("_")[3]
+                labels = [int(i)-1 for i in l[1:-1].split(',')]
+            elif mode == "test":
+                labels.append(int(file_name))
+            self.label.append(labels)
+
+    def __getitem__(self, item):
+        return self.data[item], self.label[item]
+
+    def __len__(self):
+        return self.len
+
+
+class SubRandomDataSetFolder(Dataset):
+    def __init__(self, n=1000, loader=image_loader):
         self.data = []
         self.num = n
         self.label = []
-        self.loader = image_loader
+        self.loader = loader
         self.trained = []
-
+        self._name = None
 
     def load(self, root):
         for i in range(self.num):
             dir = random.choice(os.listdir(root))
             self.data.append(self.loader(dir))
-            _,fname = os.path.split(dir)
+            _, fname = os.path.split(dir)
             l = fname.split("_")[3]
-            labels = [int(i) for i in l[1:-1].split(',')]
+            labels = [int(i) for i in l[1:-1].split(b',')]
             self.label.append(labels)
+        self._name = root
+
+    def get_root(self):
+        return self._name
 
     def __getitem__(self, item):
         return self.data[item], self.label[item]
