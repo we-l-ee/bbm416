@@ -57,7 +57,7 @@ class DatasetText(Dataset):
         return self.data[item], self.label[item]
 
     def __len__(self):
-        return self.len
+        return len(self.data)
 
 
 class DataSetFolder(Dataset):
@@ -95,9 +95,10 @@ class SubRandomDataSetFolder(Dataset):
         self._name = None
 
     def load(self, root):
+        dir_list = os.listdir(root)
         for i in range(self.num):
-            fname = random.choice(os.listdir(root))
-            self.data.append(self.loader(os.path.join(root,fname)))
+            fname = random.choice(dir_list)
+            self.data.append(self.loader(os.path.join(root, fname)))
             l = fname.split("_")[3].split('.')[0]
             labels = [int(i.strip()) for i in l[1:-1].split(',')]
             self.label.append(labels)
