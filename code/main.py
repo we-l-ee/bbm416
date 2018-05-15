@@ -259,7 +259,7 @@ def main():
 
     elif args.test:
         operator.update_test_dataset(args.fval, args.batch)
-        operator.validate(write=True)
+        preds, ids = operator.test(write=True)
 
     if operator is not None:
         operator.save_info()

@@ -199,13 +199,13 @@ class ModelOperator:
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
 
-    def predict_softmax(self, predictions, threshold):
+    def predict_softmax(self, predictions, threshold=0.5):
         predictions = softmax(predictions, dim=1)
         indices = np.argwhere(predictions > threshold)
         preds = len(predictions) * [None]
         for ind in indices:
             index, label = ind[0], ind[1]
-            if isinstance(preds[0], list):
+            if isinstance(preds[index], list):
                 preds[index].append(label)
             else:
                 preds[index] = [label]
@@ -239,7 +239,7 @@ class ModelOperator:
             np.save(curr, prev)
 
         print("Test ended!")
-        return np.array(predictions)
+        return np.array(predictions), np.array(ids)
 
     def __iter_test(self, iter, data):
         self.eta.update(0, iter)

@@ -99,7 +99,7 @@ class SubRandomDataSetFolder(Dataset):
         for i in range(self.num):
             dir = random.choice(os.listdir(root))
             self.data.append(self.loader(dir))
-            _,fname = os.path.split(dir)
+            _, fname = os.path.split(dir)
             l = fname.split("_")[3]
             labels = [int(i) for i in l[1:-1].split(b',')]
             self.label.append(labels)
