@@ -672,20 +672,20 @@ class AlexNetModel(Model):
                 param1.data = param2.data
 
 
-class SqueezeNet(Model):
+class SqueezeNetModel(Model):
 
     models = {"": models.alexnet}
 
     def __init__(self, model, num_labels, parameters, data_set=None):
-        super(SqueezeNet, self).__init__(model, num_labels, parameters, data_set)
+        super(SqueezeNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
     def init(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
 
-        model = SqueezeNet.models[""](pre_trained=pre_trained)
+        model = SqueezeNetModel.models[""](pre_trained=pre_trained)
         parameters = [""]
 
-        return SqueezeNet(model, num_labels, parameters, data_set)
+        return SqueezeNetModel(model, num_labels, parameters, data_set)
 
     def adjust_last_layer(self, mode="train", cuda=True):
 

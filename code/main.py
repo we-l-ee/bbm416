@@ -19,8 +19,14 @@ def load(root, name):
     with open(loc + ".info", 'rb') as f:
         _args = f.readline().strip().split()
         type_, args = _args[0], _args[1:]
-    func = {b"VGGModel": VGGModel.load}
-    return func[type_](args=args)
+    func = {b"VGGModel": VGGModel,
+            b"ResNetModel":  ResNetModel,
+            b"DenseNetModel": DenseNetModel,
+            b"GoogLeNetModel": GoogLeNetModel,
+            b"AlexNetModel": AlexNetModel,
+            b"SqueezeNetModel": SqueezeNetModel}
+    model_type = func[type_]
+    return model_type.load(args, model_type, loc)
 
 
 def init(_type, _batch_norm):
@@ -41,7 +47,7 @@ def init(_type, _batch_norm):
             "googlenet": GoogLeNetModel.init_v3,
             "googlenetv3": GoogLeNetModel.init_v3,
             "alexnet": AlexNetModel.init,
-            "squeezenet": SqueezeNet.init
+            "squeezenet": SqueezeNetModel.init
             }
     return func[_type](_batch_norm)
 
