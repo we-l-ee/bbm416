@@ -1,6 +1,6 @@
 from image_loader import *
 from torch.autograd import Variable
-from utility import *
+from utils import *
 
 import abc
 import math

@@ -150,10 +150,10 @@ def main():
                              " Default is '0' which means disabled."
                         )
 
-    parser.add_argument("-test", type=int, default=0,
+    parser.add_argument("-validation", type=int, default=0,
                         help="For given value, test will be applied after that epochs. For example if the value is 1, "
                              "it will apply test after 1 epoch. Default is 0 which means disabled.")
-
+    parser.add_argument("-test", store_const = 'true')
     parser.add_argument("-freeze", action='store_true',
                         help="Enables freezing -clip param will change the freezed layers."
                              " Default is 'false', disabled.")
