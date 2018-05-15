@@ -49,7 +49,7 @@ def init(_type, _batch_norm):
             "alexnet": AlexNetModel.init,
             "squeezenet": SqueezeNetModel.init
             }
-    return func[_type](_batch_norm)
+    return func[_type](batch_norm=_batch_norm)
 
 
 def plot_all(output_path, figure_folder, figname):
@@ -168,12 +168,12 @@ def main():
                         help="Plots the loss output by given -mname which is used with -output_path to determine which "
                              "loss output should be plotted.")
 
-    parser.add_argument("-train", type=int, nargs='+', default=[0],
+    parser.add_argument("-train", type=int, default=0,
                         help="For every given integer it will run as that much epochs. After each run of epocs "
                              "if test is activated test will be applied to model. Default is single run of 50 epochs."
                              " Default is '0' which means disabled."
                         )
-    parser.add_argument("-test", type=int, nargs='+', default=[0],
+    parser.add_argument("-test", action='store_true',
                         help="Evaluate test data set."
                         )
 
@@ -227,11 +227,11 @@ def main():
     if args.load is not None:
         model = load(args.model_path, args.name)
 
-    elif (len(args.train) > 0 and args.train[0] > 0) or args.test:
+    elif args.train > 0 or args.test:
         model = init(args.type, args.batch_norm)
 
     if model is not None:
-        operator = ModelOperator(model, args.model_path, args.output_path, args.name, args.loss, args.cuda)
+        operator = ModelOperator(model, args.model_path, args.output_path, args.mname, args.loss, args.cuda)
 
     if args.freeze:
         model.freeze(args.clip)
@@ -246,7 +246,7 @@ def main():
     else:
         epochs = [args.train]
 
-    if len(args.train) > 0 and args.train[0] > 0:
+    if args.train > 0:
         operator.update_train_dataset(args.ftrain, args.batch)
         operator.update_val_dataset(args.fval, args.batch)
 

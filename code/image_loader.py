@@ -83,7 +83,7 @@ class DataSetFolder(Dataset):
         return self.data[item], self.label[item]
 
     def __len__(self):
-        return self.len
+        return len(self.data)
 
 
 class SubRandomDataSetFolder(Dataset):
@@ -112,5 +112,5 @@ class SubRandomDataSetFolder(Dataset):
         return self.data[item], self.label[item]
 
     def __len__(self):
-        return self.len
+        return len(self.data)
 

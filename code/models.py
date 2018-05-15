@@ -382,7 +382,7 @@ class Model(object):
 
         num_labels = np.load(loc + ".npy")[0]
 
-        model = clazz.models[args[0]](pre_trained=False)
+        model = clazz.models[args[0]](pretrained=False)
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
         return clazz(model, num_labels, args)
@@ -404,46 +404,46 @@ class VGGModel(Model):
         super(VGGModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_11(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_11(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["11bn"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["11bn"](pretrained=pretrained)
             parameters = ["11bn"]
         else:
-            model = VGGModel.vgg_models["11"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["11"](pretrained=pretrained)
             parameters = ["11"]
         return VGGModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_13(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_13(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["13bn"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["13bn"](pretrained=pretrained)
             parameters = ["13bn"]
         else:
-            model = VGGModel.vgg_models["13"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["13"](pretrained=pretrained)
             parameters = ["13bn"]
         return VGGModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_16(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_16(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["16bn"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["16bn"](pretrained=pretrained)
             parameters = ["16bn"]
         else:
-            model = VGGModel.vgg_models["16"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["16"](pretrained=pretrained)
             parameters = ["16"]
         return VGGModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_19(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_19(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["19bn"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["19bn"](pretrained=pretrained)
             parameters = ["19bn"]
         else:
-            model = VGGModel.vgg_models["19"](pre_trained=pre_trained)
+            model = VGGModel.vgg_models["19"](pretrained=pretrained)
             parameters = ["19"]
 
         return VGGModel(model, num_labels, parameters, data_set)
@@ -486,41 +486,41 @@ class ResNetModel(Model):
         super(ResNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_18(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_18(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = ResNetModel.models["18"](pre_trained=pre_trained)
+        model = ResNetModel.models["18"](pretrained=pretrained)
         parameters = ["18"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_34(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_34(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = ResNetModel.models["34"](pre_trained=pre_trained)
+        model = ResNetModel.models["34"](pretrained=pretrained)
         parameters = ["34"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_50(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_50(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = ResNetModel.models["50"](pre_trained=pre_trained)
+        model = ResNetModel.models["50"](pretrained=pretrained)
         parameters = ["50"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_101(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_101(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = ResNetModel.models["101"](pre_trained=pre_trained)
+        model = ResNetModel.models["101"](pretrained=pretrained)
         parameters = ["101"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_152(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_152(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = ResNetModel.models["152"](pre_trained=pre_trained)
+        model = ResNetModel.models["152"](pretrained=pretrained)
         parameters = ["152"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
@@ -552,33 +552,33 @@ class DenseNetModel(Model):
         super(DenseNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_121(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_121(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = DenseNetModel.models["121"](pre_trained=pre_trained)
+        model = DenseNetModel.models["121"](pretrained=pretrained)
         parameters = ["121"]
 
         return DenseNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_169(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_169(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = DenseNetModel.models["169"](pre_trained=pre_trained)
+        model = DenseNetModel.models["169"](pretrained=pretrained)
         parameters = ["169"]
 
         return DenseNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_161(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_161(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = DenseNetModel.models["161"](pre_trained=pre_trained)
+        model = DenseNetModel.models["161"](pretrained=pretrained)
         parameters = ["161"]
 
         return DenseNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_201(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_201(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = DenseNetModel.models["201"](pre_trained=pre_trained)
+        model = DenseNetModel.models["201"](pretrained=pretrained)
         parameters = ["201"]
 
         return DenseNetModel(model, num_labels, parameters, data_set)
@@ -608,9 +608,9 @@ class GoogLeNetModel(Model):
         super(GoogLeNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_v3(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init_v3(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = GoogLeNetModel.models["v3"](pre_trained=pre_trained)
+        model = GoogLeNetModel.models["v3"](pretrained=pretrained)
         parameters = ["18"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
@@ -639,9 +639,9 @@ class AlexNetModel(Model):
         super(AlexNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = AlexNetModel.models[""](pre_trained=pre_trained)
+        model = AlexNetModel.models[""](pretrained=pretrained)
         parameters = [""]
 
         return AlexNetModel(model, num_labels, parameters, data_set)
@@ -680,9 +680,9 @@ class SqueezeNetModel(Model):
         super(SqueezeNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init(num_labels=1000, pre_trained=True, data_set=None, **kwargs):
+    def init(num_labels=1000, pretrained=True, data_set=None, **kwargs):
 
-        model = SqueezeNetModel.models[""](pre_trained=pre_trained)
+        model = SqueezeNetModel.models[""](pretrained=pretrained)
         parameters = [""]
 
         return SqueezeNetModel(model, num_labels, parameters, data_set)
