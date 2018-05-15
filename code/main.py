@@ -12,7 +12,6 @@ import numpy as np
 gc.enable()
 
 
-
 def load(root, name):
     print("Model loading...")
 
@@ -118,14 +117,15 @@ def plot_all(output_path, figure_folder, figname):
 
 def main():
     parser = argparse.ArgumentParser(description='DNN Parser of BBM418 Assignment 3.')
-    parser.add_argument("-ftrain", default='train.txt',
-                        help="Text file which has the paths of all the train images."
-                             " Default is 'train.txt'."
+    parser.add_argument("-ftrain", default='./train',
+                        help="Folder which has training data."
+                             " Default is './train'."
                         )
-    parser.add_argument("-ftest", default='test.txt',
-                        help="Text file which has the paths of all the test images."
-                             " Default is 'test.txt'."
+    parser.add_argument("-ftest", default='./test',
+                        help="Folder which has test data."
+                             " Default is './test'."
                         )
+
     parser.add_argument("-model_path", default='models',
                         help="Root folder of the stored models."
                              " Default is 'models'."
@@ -167,10 +167,13 @@ def main():
                              "if test is activated test will be applied to model. Default is single run of 50 epochs."
                              " Default is '0' which means disabled."
                         )
+    parser.add_argument("-test", type=int, nargs='+', default=[0],
+                        help="Evaluate test data set."
+                        )
 
-    parser.add_argument("-test", type=int, default=0,
-                        help="For given value, test will be applied after that epochs. For example if the value is 1, "
-                             "it will apply test after 1 epoch. Default is 0 which means disabled.")
+    parser.add_argument("-validation", type=int, default=0,
+                        help="For given value, validation will be applied after that epochs. For example if the value "
+                             "is 1, it will apply test after 1 epoch. Default is 0 which means disabled.")
 
     parser.add_argument("-freeze", action='store_true',
                         help="Enables freezing -clip param will change the freezed layers."
@@ -248,8 +251,8 @@ def main():
             if args.validation != 0:
                 operator.validate(write=True)
 
-    elif args.validation:
-        operator.update_val_dataset(args.fval, args.batch)
+    elif args.test:
+        operator.update_test_dataset(args.fval, args.batch)
         operator.validate(write=True)
 
     if operator is not None:
