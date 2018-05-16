@@ -1,6 +1,28 @@
 import time
 import numpy as np
 import json
+from sklearn.metrics import fbeta_score
+
+
+def f2_score(y_true, y_pred):
+    y_true, y_pred, = np.array(y_true), np.array(y_pred)
+    return fbeta_score(y_true, y_pred, beta=2, average='samples')
+
+
+def find_f2score_threshold(p_valid, y_valid, try_all=False, verbose=False):
+    best = 0
+    best_score = -1
+    totry = np.arange(0, 1, 0.005) if try_all is False else np.unique(p_valid)
+    for t in totry:
+        score = f2_score(y_valid, p_valid > t)
+        if score > best_score:
+            best_score = score
+            best = t
+    if verbose is True:
+        print('Best score: ', round(best_score, 5), ' @ threshold =', best)
+    return best
+
+# best_threshold = find_f2score_threshold(y_pred, y_true, verbose=True)
 
 
 def label_info(path='train.json'):

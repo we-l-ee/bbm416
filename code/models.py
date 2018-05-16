@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchvision.models as models
 import torch
-from torch.nn.functional import softmax
+from torch.nn.functional import sigmoid, softmax
 
 
 # Model is main class which includes training, model loading, model saving, testing etc.
@@ -61,6 +61,9 @@ class ModelOperator:
         elif loss == 'mse':
             self.func_target = self.__mse_output_target
             self.criterion = torch.nn.MSELoss()
+        elif loss == 'mlsm':
+            self.func_target = self.__mlsm_output_target
+            self.criterion = torch.nn.MultiLabelSoftMarginLoss()
 
     def __variable_cuda(self, inputs, labels, requires_grad=True):
         return Variable(inputs, requires_grad=requires_grad).cuda(), \
@@ -122,6 +125,7 @@ class ModelOperator:
         self.model.model.train()
 
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.model.model.parameters()), lr=lr, momentum=momentum)
+        # optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.model.parameters()), lr=lr)
 
         losses = []
         errs = []
@@ -154,6 +158,9 @@ class ModelOperator:
         return softmax(outputs, dim=1), targets
 
     def __cross_output_target(self, outputs, targets):
+        return outputs, targets
+
+    def __mlsm_output_target(self, outputs, targets):
         return outputs, targets
 
     def __iter_train(self, epoch, iter, data, tot_loss, optimizer, e_loss):
@@ -197,8 +204,8 @@ class ModelOperator:
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
 
-    def predict_softmax(self, predictions, threshold=0.5):
-        predictions = softmax(predictions, dim=1)
+    def predict_sigmoid(self, predictions, threshold=0.5):
+        predictions = sigmoid(predictions)
         indices = np.argwhere(predictions > threshold)
         preds = len(predictions) * [None]
         for ind in indices:
@@ -221,7 +228,7 @@ class ModelOperator:
         for i, data in enumerate(self.test_loader):
             outputs = self.__iter_test(i, data)
             predicts = outputs.data.cpu().numpy()
-            predicts = self.predict_softmax(predicts, 0.5)
+            predicts = self.predict_sigmoid(predicts, 0.5)
             predictions.extend(predicts)
             ids.append(data[1])
 
