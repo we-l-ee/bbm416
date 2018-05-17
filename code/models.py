@@ -54,16 +54,22 @@ class ModelOperator:
 
         print("Model Initialized.")
 
+    def __default_loss_layer_func(self, preds):
+        return preds
+
     def __set_loss(self, loss):
         if loss == 'cross':
             self.func_target = self.__cross_output_target
             self.criterion = torch.nn.CrossEntropyLoss()
+            self.loss_layer_func = self.__default_loss_layer_func
         elif loss == 'mse':
             self.func_target = self.__mse_output_target
             self.criterion = torch.nn.MSELoss()
+            self.loss_layer_func = softmax
         elif loss == 'mlsm':
             self.func_target = self.__mlsm_output_target
             self.criterion = torch.nn.MultiLabelSoftMarginLoss()
+            self.loss_layer_func = sigmoid
 
     def __variable_cuda(self, inputs, labels, requires_grad=True):
         return Variable(inputs, requires_grad=requires_grad).cuda(), \
@@ -106,7 +112,7 @@ class ModelOperator:
         print("Train dataset is loading...")
 
         self.model.train_data_set.load(train_path)
-        self.model.adjust_last_layer()
+        self.model.adjust_last_layer(cuda=self.cuda)
         self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
                                                         num_workers=0)
 
@@ -179,7 +185,7 @@ class ModelOperator:
         # To get best targets for criterion method. For feature use if there is more than one loss function option.
         outputs, targets = self.func_target(outputs, targets)
 
-        loss = self.criterion(outputs, targets)
+        loss = self.criterion(outputs, targets.detach().float())
         loss.backward()
         optimizer.step()
 
@@ -204,8 +210,8 @@ class ModelOperator:
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
 
-    def predict_sigmoid(self, predictions, threshold=0.5):
-        predictions = sigmoid(predictions)
+    def predict_with_loss_layer(self, predictions, threshold=0.5):
+        predictions = self.loss_layer_func(predictions)
         indices = np.argwhere(predictions > threshold)
         preds = len(predictions) * [None]
         for ind in indices:
@@ -228,7 +234,7 @@ class ModelOperator:
         for i, data in enumerate(self.test_loader):
             outputs = self.__iter_test(i, data)
             predicts = outputs.data.cpu().numpy()
-            predicts = self.predict_sigmoid(predicts, 0.5)
+            predicts = self.predict_with_loss_layer(predicts, 0.5)
             predictions.extend(predicts)
             ids.append(data[1])
 
@@ -468,7 +474,7 @@ class VGGModel(Model):
             torch.nn.Linear(4096, self.num_labels)
         )
 
-        if cuda:
+        if cuda == True:
             new = new.cuda()
 
         self.model.classifier = new
