@@ -39,9 +39,9 @@ def label_info(path='train.json'):
     max_label = np.max(labels)
     min_label = np.min(labels)
 
-    for label in range(min_label, max_label+1):
-        if label not in labels:
-            raise Exception("data is invalidate")
+    # for label in range(min_label, max_label+1):
+    #     if label not in labels:
+    #         raise Exception("data is invalidate")
 
     return labels, min_label, max_label
 
