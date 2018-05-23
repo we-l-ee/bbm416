@@ -125,19 +125,19 @@ def plot_all(output_path, figure_folder, figname):
 
 def main():
     parser = argparse.ArgumentParser(description='DNN Parser of BBM418 Assignment 3.')
-    parser.add_argument("-ftrain", default='./train',
+    parser.add_argument("-ftrain", default='../dataset/train',
                         help="Folder which has training data."
-                             " Default is './train'."
+                             " Default is '../dataset/train'."
                         )
-    parser.add_argument("-ftest", default='./test',
+    parser.add_argument("-ftest", default='../dataset/test',
                         help="Folder which has test data."
-                             " Default is './test'."
+                             " Default is '../dataset/test'."
                         )
 
-    parser.add_argument("-fval", default='./test',
-                        help="Folder which has validation data."
-                             " Default is './validation'."
-                        )
+    # parser.add_argument("-fval", default='../dataset/validation',
+    #                     help="Folder which has validation data."
+    #                          " Default is '../dataset/validation'."
+    #                     )
 
     parser.add_argument("-model_path", default='models',
                         help="Root folder of the stored models."
@@ -241,7 +241,7 @@ def main():
         operator = ModelOperator(model, args.model_path, args.output_path, args.mname, args.loss, args.cuda)
 
     if args.freeze:
-        model.freeze(args.clip)
+        operator.freeze(args.clip)
 
     if args.validation != 0:
         if args.validation > args.train:
@@ -279,7 +279,7 @@ def main():
 
     return model
 
-# sys.argv.extend("-train 1 1 1 1 1 1 1 1 1 1 -load vgg-mse-10.32 -save -test -lr 0.01 -batch 32 -freeze -clip 0 26 -mname vgg-mse-10.32 -cuda".split())
+sys.argv.extend("-train 1 -save -lr 0.01 -batch 32 -freeze -clip 0 26 -mname vgg-mse-10.32 -cuda".split())
 # sys.argv.extend("-train 10 10 10 -save -test -lr 0.01 -batch 16 -mname vgg-mse-full-3.0 -cuda".split())
 # sys.argv.extend("-test -load vgg-full-3.0 -cuda".split())
 # sys.argv.extend("-plot -mname vgg-mse-5.0".split())
