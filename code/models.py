@@ -87,7 +87,7 @@ class ModelOperator:
 
         with open(curr + '.info', 'ab') as finfo:
             if is_new:
-                finfo.write(self.model.identifier + b'\n')
+                finfo.write(self.model.identifier() + b'\n')
 
             for action, output in self.info:
                 if action == 'train':
@@ -361,7 +361,7 @@ class Model(object):
         self.num_labels = num_labels
         self.model = model
         if data_set is None:
-            self.train_data_set = SubRandomDataSetFolder()
+            self.train_data_set = SubRandomDataSetFolder(2)
             self.test_data_set = DataSetFolder()
             self.val_data_set = DataSetFolder()
 
@@ -376,10 +376,10 @@ class Model(object):
     def identifier(self):
         bargs = bytes()
         for param in self.parameters[0:-1]:
-            bargs += param+b' '
-        bargs += self.parameters[-1]
+            bargs += bytes(str(param), 'utf-8')+b' '
+        bargs += bytes(str(self.parameters[-1]), 'utf-8')
 
-        return bytes(self.__class__.__name__, 'utf-8') + bargs
+        return bytes(self.__class__.__name__, 'utf-8') + b' ' + bargs
 
     def save(self, loc):
         torch.save(self.model.state_dict(), loc + ".pt")
