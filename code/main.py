@@ -49,8 +49,9 @@ def init(_type, _batch_norm):
             "alexnet": AlexNetModel.init,
             "squeezenet": SqueezeNetModel.init
             }
-    return func[_type](batch_norm=_batch_norm)
-
+    if _type.startswith("vgg"):
+        return func[_type](batch_norm=_batch_norm)
+    return func[_type]()
 
 def plot_all(output_path, figure_folder, figname):
     outputs = np.load(output_path)
