@@ -43,7 +43,7 @@ def label_info(path='train.json'):
     #     if label not in labels:
     #         raise Exception("data is invalidate")
 
-    return labels, min_label, max_label
+    return labels, int(min_label), int(max_label)
 
 
 class ETA(object):

@@ -6,9 +6,9 @@ import random
 import torch
 import numpy as np
 from utils import label_info
+
+
 # Some images has alpha channel to. All converted to RGB.
-
-
 def image_loader(image_path, image_size=224):
     image = Image.open(image_path).convert("RGB")
     # image = np.array(image); image = image/ np.linalg.norm(image); image = Image.fromarray(Image.)
@@ -112,7 +112,7 @@ class SubRandomDataSetFolder(Dataset):
 
             temp_labels = np.zeros(self.max_class - self.min_class + 1)
             for label in labels:
-                temp_labels[label-int(self.min_class)] = 1.0
+                temp_labels[label-self.min_class] = 1.0
             self.label.append(torch.from_numpy(temp_labels))
 
     def get_root(self):

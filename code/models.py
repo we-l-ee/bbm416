@@ -461,7 +461,7 @@ class VGGModel(Model):
 
     def adjust_last_layer(self, mode="train", cuda=True):
         if mode == "train":
-            self.num_labels = self.train_data_set.num_classes
+            self.num_labels = self.train_data_set.max_class - self.train_data_set.min_class + 1
 
         old = self.model.classifier
         new = torch.nn.Sequential(
@@ -538,7 +538,7 @@ class ResNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            self.num_labels = self.train_data_set.num_classes
+            self.num_labels = self.train_data_set.max_class - self.train_data_set.min_class + 1
 
         if self.num_labels == 1000:
             return
@@ -596,7 +596,7 @@ class DenseNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            self.num_labels = self.train_data_set.num_classes
+            self.num_labels = self.train_data_set.max_class - self.train_data_set.min_class + 1
 
         if self.num_labels == 1000:
             return
@@ -628,7 +628,7 @@ class GoogLeNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            self.num_labels = self.train_data_set.num_classes
+            self.num_labels = self.train_data_set.max_class - self.train_data_set.min_class + 1
 
         if self.num_labels == 1000:
             return
@@ -659,7 +659,7 @@ class AlexNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            self.num_labels = self.train_data_set.num_classes
+            self.num_labels = self.train_data_set.max_class - self.train_data_set.min_class + 1
 
         old = self.model.classifier
         new = torch.nn.Sequential(
@@ -700,7 +700,7 @@ class SqueezeNetModel(Model):
     def adjust_last_layer(self, mode="train", cuda=True):
 
         if mode == "train":
-            self.num_labels = self.train_data_set.num_classes
+            self.num_labels = self.train_data_set.max_class - self.train_data_set.min_class + 1
 
         if self.num_labels == self.model.num_classes:
             return
