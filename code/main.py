@@ -203,7 +203,7 @@ def main():
     parser.add_argument("-mkdir", action='store_true',
                         help="Activate it if giving directories are not made before hand.")
 
-    parser.add_argument("-loss", default='mse',
+    parser.add_argument("-loss", default='mlsm',
                         help="Loss function. Default is mse.")
 
     parser.add_argument("-batch_norm", action='store_true',
