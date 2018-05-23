@@ -474,7 +474,7 @@ class VGGModel(Model):
             torch.nn.Linear(4096, self.num_labels)
         )
 
-        if cuda == True:
+        if cuda:
             new = new.cuda()
 
         self.model.classifier = new
@@ -490,14 +490,13 @@ class ResNetModel(Model):
               "34": models.resnet34,
               "50": models.resnet50,
               "101": models.resnet101,
-              "152": models.resnet152,
-             }
+              "152": models.resnet152}
 
     def __init__(self, model, num_labels, parameters, data_set=None):
         super(ResNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_18(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_18(num_labels=1000, pretrained=True, data_set=None):
 
         model = ResNetModel.models["18"](pretrained=pretrained)
         parameters = ["18"]
@@ -505,7 +504,7 @@ class ResNetModel(Model):
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_34(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_34(num_labels=1000, pretrained=True, data_set=None):
 
         model = ResNetModel.models["34"](pretrained=pretrained)
         parameters = ["34"]
@@ -513,7 +512,7 @@ class ResNetModel(Model):
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_50(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_50(num_labels=1000, pretrained=True, data_set=None):
 
         model = ResNetModel.models["50"](pretrained=pretrained)
         parameters = ["50"]
@@ -521,7 +520,7 @@ class ResNetModel(Model):
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_101(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_101(num_labels=1000, pretrained=True, data_set=None):
 
         model = ResNetModel.models["101"](pretrained=pretrained)
         parameters = ["101"]
@@ -529,7 +528,7 @@ class ResNetModel(Model):
         return ResNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_152(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_152(num_labels=1000, pretrained=True, data_set=None):
 
         model = ResNetModel.models["152"](pretrained=pretrained)
         parameters = ["152"]
@@ -563,7 +562,7 @@ class DenseNetModel(Model):
         super(DenseNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_121(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_121(num_labels=1000, pretrained=True, data_set=None):
 
         model = DenseNetModel.models["121"](pretrained=pretrained)
         parameters = ["121"]
@@ -571,7 +570,7 @@ class DenseNetModel(Model):
         return DenseNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_169(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_169(num_labels=1000, pretrained=True, data_set=None):
 
         model = DenseNetModel.models["169"](pretrained=pretrained)
         parameters = ["169"]
@@ -579,7 +578,7 @@ class DenseNetModel(Model):
         return DenseNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_161(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_161(num_labels=1000, pretrained=True, data_set=None):
 
         model = DenseNetModel.models["161"](pretrained=pretrained)
         parameters = ["161"]
@@ -587,7 +586,7 @@ class DenseNetModel(Model):
         return DenseNetModel(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_201(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_201(num_labels=1000, pretrained=True, data_set=None):
 
         model = DenseNetModel.models["201"](pretrained=pretrained)
         parameters = ["201"]
@@ -619,7 +618,7 @@ class GoogLeNetModel(Model):
         super(GoogLeNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init_v3(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init_v3(num_labels=1000, pretrained=True, data_set=None):
 
         model = GoogLeNetModel.models["v3"](pretrained=pretrained)
         parameters = ["18"]
@@ -650,7 +649,7 @@ class AlexNetModel(Model):
         super(AlexNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init(num_labels=1000, pretrained=True, data_set=None):
 
         model = AlexNetModel.models[""](pretrained=pretrained)
         parameters = [""]
@@ -691,7 +690,7 @@ class SqueezeNetModel(Model):
         super(SqueezeNetModel, self).__init__(model, num_labels, parameters, data_set)
 
     @staticmethod
-    def init(num_labels=1000, pretrained=True, data_set=None, **kwargs):
+    def init(num_labels=1000, pretrained=True, data_set=None):
 
         model = SqueezeNetModel.models[""](pretrained=pretrained)
         parameters = [""]
