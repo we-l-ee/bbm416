@@ -112,7 +112,7 @@ class SubRandomDataSetFolder(Dataset):
 
             temp_labels = np.zeros(self.max_class - self.min_class + 1)
             for label in labels:
-                temp_labels[label-int(self.min_class)] = 1.0
+                temp_labels[label-self.min_class] = 1.0
             self.label.append(torch.from_numpy(temp_labels))
 
     def get_root(self):
