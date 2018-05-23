@@ -6,9 +6,9 @@ import random
 import torch
 import numpy as np
 from utils import label_info
+
+
 # Some images has alpha channel to. All converted to RGB.
-
-
 def image_loader(image_path, image_size=224):
     image = Image.open(image_path).convert("RGB")
     # image = np.array(image); image = image/ np.linalg.norm(image); image = Image.fromarray(Image.)
