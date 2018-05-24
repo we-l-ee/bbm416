@@ -376,29 +376,15 @@ class Model(object):
         self.num_labels = num_labels
         self.model = model
         if data_set is None:
-            self.train_data_set = SubRandomDataSetFolder(200)
-            self.val_data_set = SubRandomDataSetFolder()
-            self.test_data_set = DataSetFolder()
+            self.train_data_set = None
+            self.val_data_set = None
+            self.test_data_set = None
 
-            self.test_data_set = SubRandomDataSetFolder(2)
 
         self.parameters = parameters
 
 
     def createDatasets(self, **kwargs):
-        # if type == 'subrandom':
-        #     self.train_data_set = SubRandomDataSetFolder(200)
-        #     if validation:
-        #         self.val_data_set = DataSetFolder()
-        #
-        #     self.test_data_set = SubRandomDataSetFolder(2)
-        #
-        # elif type == 'default':
-        #     self.train_data_set = DataSetFolder()
-        #     if validation:
-        #         self.val_data_set = DataSetFolder()
-        #
-        #     self.test_data_set = DataSetFolder()
         if 'train' in kwargs:
             self.train_data_set = kwargs['train']
         if 'validation' in kwargs:

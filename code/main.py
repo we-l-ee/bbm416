@@ -189,7 +189,7 @@ def main():
                         help="if it is more than 0 it will sub sample the dataset as that number randomly.."
                              " Default is '0' which means disabled."
                         )
-    parser.add_argument("-dataset_type", type=str, default='default',
+    parser.add_argument("-dtype", type=str, default='default',
                         help="Type of the datasets. subsampled or whole."
                              "Whole folder dataset."
                         )
@@ -268,7 +268,7 @@ def main():
         epochs = [args.train]
 
     if args.train > 0:
-        operator.update_train_dataset(args.ftrain, args.batch, args.valratio)
+        operator.update_train_dataset(args.ftrain, args.batch, args.valratio, dtype=args.dtype, subsample=args.subsample)
 
         for i, epoch in enumerate(epochs):
             print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")
