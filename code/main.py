@@ -151,7 +151,8 @@ def main():
                         help="Root folder of the any outputs of the plot figures."
                              " Default is 'figures'."
                         )
-
+    parser.add_argument("-valratio", type=float, default=0.0,
+                        help="Ratio for Train Set / Validation Set split")
     parser.add_argument("-batch", type=int, default=16,
                         help="Batch size of the train data")
     parser.add_argument("-lr", type=float, default=0.01,
@@ -254,7 +255,7 @@ def main():
         epochs = [args.train]
 
     if args.train > 0:
-        operator.update_train_dataset(args.ftrain, args.batch)
+        operator.update_train_dataset(args.ftrain, args.batch, args.valratio)
         if args.validation != 0:
             operator.update_val_dataset(args.fval, args.batch)
 
@@ -265,7 +266,7 @@ def main():
                 print("Validation of (", i + 1, "/", len(epochs), ") initializing...")
                 operator.validate(write=True)
 
-    elif args.test:
+    if args.test:
         operator.update_test_dataset(args.ftest, args.batch)
         preds, ids = operator.test(write=True)
 

@@ -87,7 +87,7 @@ class ModelOperator:
 
         with open(curr + '.info', 'ab') as finfo:
             if is_new:
-                finfo.write(self.model.identifier + b'\n')
+                finfo.write(self.model.identifier() + b'\n')
 
             for action, output in self.info:
                 if action == 'train':
@@ -108,10 +108,12 @@ class ModelOperator:
                                                                     b'Error Top 5 %.2f%%' % output[1] + b'\n')
         self.info = []
 
-    def update_train_dataset(self, train_path='train', batch_size=16):
+    def update_train_dataset(self, train_path='train', batch_size=16, val_ratio=0):
         print("Train dataset is loading...")
 
-        self.model.train_data_set.load(train_path)
+        val_dirs = self.model.train_data_set.load(train_path, mode='train', val_ratio=val_ratio)
+        self.model.val_data_set.load(train_path, data_dirs=val_dirs)
+
         self.model.adjust_last_layer(cuda=self.cuda)
         self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
                                                         num_workers=0)
@@ -205,13 +207,14 @@ class ModelOperator:
         print("Test dataset is loading...")
 
         self.model.test_data_set.load(test_path, mode="test")
+
         self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
 
     def predict_with_loss_layer(self, predictions, threshold=0.5):
-        predictions = self.loss_layer_func(predictions)
+        predictions = self.loss_layer_func(predictions).data.cpu().numpy()
         indices = np.argwhere(predictions > threshold)
         preds = len(predictions) * [None]
         for ind in indices:
@@ -233,8 +236,7 @@ class ModelOperator:
         print("Test starting...")
         for i, data in enumerate(self.test_loader):
             outputs = self.__iter_test(i, data)
-            predicts = outputs.data.cpu().numpy()
-            predicts = self.predict_with_loss_layer(predicts, 0.5)
+            predicts = self.predict_with_loss_layer(outputs, 0.5)
             predictions.extend(predicts)
             ids.append(data[1])
 
@@ -250,7 +252,7 @@ class ModelOperator:
             np.save(curr, prev)
 
         print("Test ended!")
-        return np.array(predictions), np.array(ids)
+        return predictions, ids
 
     def __iter_test(self, iter, data):
         self.eta.update(0, iter)
@@ -361,9 +363,11 @@ class Model(object):
         self.num_labels = num_labels
         self.model = model
         if data_set is None:
-            self.train_data_set = SubRandomDataSetFolder()
+            self.train_data_set = SubRandomDataSetFolder(200)
+            self.val_data_set = SubRandomDataSetFolder()
             self.test_data_set = DataSetFolder()
-            self.val_data_set = DataSetFolder()
+
+            self.test_data_set = SubRandomDataSetFolder(2)
 
         self.parameters = parameters
 
@@ -376,10 +380,10 @@ class Model(object):
     def identifier(self):
         bargs = bytes()
         for param in self.parameters[0:-1]:
-            bargs += param+b' '
-        bargs += self.parameters[-1]
+            bargs += bytes(str(param), 'utf-8')+b' '
+        bargs += bytes(str(self.parameters[-1]), 'utf-8')
 
-        return bytes(self.__class__.__name__, 'utf-8') + bargs
+        return bytes(self.__class__.__name__, 'utf-8') + b' ' + bargs
 
     def save(self, loc):
         torch.save(self.model.state_dict(), loc + ".pt")
