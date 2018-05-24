@@ -73,12 +73,14 @@ class DataSetFolder(Dataset):
     def load(self, root, mode="val"):
 
         for file_name in os.listdir(root):
-            self.data.append(self.loader(os.path.join(root,file_name)))
-            if mode == "val":
+            self.data.append(self.loader(os.path.join(root, file_name)))
+            if mode == "val" or mode == 'train':
                 l = file_name.split("_")[3].split('.')[0]
                 labels = [int(i)-1 for i in l[1:-1].split(',')]
             elif mode == "test":
-                labels.append(int(file_name))
+                labels = int(file_name.split('.')[0])
+            else:
+                raise Exception('Mode is invalid!')
             self.label.append(labels)
 
     def __getitem__(self, item):
@@ -98,22 +100,41 @@ class SubRandomDataSetFolder(Dataset):
         self._name = None
         self.num_classes, self.min_class, self.max_class = None, None, None
 
-    def load(self, root):
+    def load(self, root, mode='train', val_ratio=0, data_dirs=None):
         self._name = root
-        info_label = label_info(self._name + ".json")
-        self.num_classes, self.min_class, self.max_class = len(info_label[0]), info_label[1], info_label[2]
+        val_dir = None
+        if data_dirs is None:
+            dir_list = os.listdir(root)
+            np.random.shuffle(dir_list)
+            data_dirs = dir_list[:self.num]
+            if mode == 'train':
+                info_label = label_info(self._name + ".json")
+                self.num_classes, self.min_class, self.max_class = len(info_label[0]), info_label[1], info_label[2]
+                val_num = int(self.num*val_ratio)
+                val_dir = data_dirs[: val_num]
+                data_dirs = data_dirs[val_num:]
 
-        dir_list = os.listdir(root)
-        for i in range(self.num):
-            fname = random.choice(dir_list)
+        self.num = len(data_dirs)
+        for fname in data_dirs:
             self.data.append(self.loader(os.path.join(root, fname)))
-            l = fname.split("_")[3].split('.')[0]
-            labels = [int(i.strip()) for i in l[1:-1].split(',')]
+            if mode == 'train' or mode == 'val':
+                label = self.__get_labels(fname)
+            elif mode == 'test':
+                label = int(fname.split('.')[0])
+            else:
+                raise Exception('Mode is invalid!')
+            self.label.append(label)
 
-            temp_labels = np.zeros(self.max_class - self.min_class + 1)
-            for label in labels:
-                temp_labels[label-self.min_class] = 1.0
-            self.label.append(torch.from_numpy(temp_labels))
+        return val_dir
+
+    def __get_labels(self, fname):
+        l = fname.split("_")[3].split('.')[0]
+        labels = [int(i.strip()) for i in l[1:-1].split(',')]
+
+        temp_labels = np.zeros(self.max_class - self.min_class + 1)
+        for label in labels:
+            temp_labels[label - self.min_class] = 1.0
+        return torch.from_numpy(temp_labels)
 
     def get_root(self):
         return self._name
@@ -123,6 +144,5 @@ class SubRandomDataSetFolder(Dataset):
 
     def __len__(self):
         return len(self.data)
-
 
 
