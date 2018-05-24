@@ -108,11 +108,30 @@ class ModelOperator:
                                                                     b'Error Top 5 %.2f%%' % output[1] + b'\n')
         self.info = []
 
-    def update_train_dataset(self, train_path='train', batch_size=16, val_ratio=0):
+    def update_train_dataset(self, train_path='train', batch_size=16, val_ratio=None, dtype='default', subsample=0):
         print("Train dataset is loading...")
 
+        if dtype == 'subrandom':
+            train = SubRandomDataSetFolder(subsample)
+
+        elif dtype == 'default':
+            train = DataSetFolder()
+
+        validation = None
+        if val_ratio is not None:
+            validation = DataSetFolder()
+
+        self.model.createDatasets(train=train, validation=validation)
+
+
         val_dirs = self.model.train_data_set.load(train_path, mode='train', val_ratio=val_ratio)
-        self.model.val_data_set.load(train_path, data_dirs=val_dirs)
+        if val_dirs is not None:
+            self.model.val_data_set.load(train_path, data_dirs=val_dirs)
+            self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
+
+            self._val_set_len = len(self.model.val_data_set)
+            self._val_batch_size = batch_size
+
 
         self.model.adjust_last_layer(cuda=self.cuda)
         self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
@@ -206,6 +225,8 @@ class ModelOperator:
     def update_test_dataset(self, test_path='test', batch_size=16):
         print("Test dataset is loading...")
 
+        self.model.createDatasets(test=DataSetFolder())
+
         self.model.test_data_set.load(test_path, mode="test")
 
         self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
@@ -271,14 +292,6 @@ class ModelOperator:
 
         return outputs
 
-    def update_val_dataset(self, val_path='validation', batch_size=16):
-        print("Validation dataset is loading...")
-
-        self.model.val_data_set.load(val_path)
-        self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
-
-        self._val_set_len = len(self.model.val_data_set)
-        self._val_batch_size = batch_size
 
     def validate(self, write=True):
         self.eta.set_epoch(0)
@@ -370,6 +383,28 @@ class Model(object):
             self.test_data_set = SubRandomDataSetFolder(2)
 
         self.parameters = parameters
+
+
+    def createDatasets(self, **kwargs):
+        # if type == 'subrandom':
+        #     self.train_data_set = SubRandomDataSetFolder(200)
+        #     if validation:
+        #         self.val_data_set = DataSetFolder()
+        #
+        #     self.test_data_set = SubRandomDataSetFolder(2)
+        #
+        # elif type == 'default':
+        #     self.train_data_set = DataSetFolder()
+        #     if validation:
+        #         self.val_data_set = DataSetFolder()
+        #
+        #     self.test_data_set = DataSetFolder()
+        if 'train' in kwargs:
+            self.train_data_set = kwargs['train']
+        if 'validation' in kwargs:
+            self.val_data_set =  kwargs['validation']
+        if 'test' in kwargs:
+            self.test_data_set = kwargs['test']
 
     def to_cuda(self):
         self.model = self.model.cuda()

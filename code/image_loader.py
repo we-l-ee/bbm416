@@ -70,9 +70,19 @@ class DataSetFolder(Dataset):
         self.loader = loader
         self.trained = []
 
-    def load(self, root, mode="val"):
+    def load(self, root, mode="val", val_ratio=None, data_dirs=None):
+        val_dir = None
+        if data_dirs is None:
+            data_dirs = os.listdir(root)
+            if mode == 'train':
+                info_label = label_info(self._name + ".json")
+                self.num_classes, self.min_class, self.max_class = len(info_label[0]), info_label[1], info_label[2]
+                if val_ratio is not None:
+                    val_num = int(self.num*val_ratio)
+                    val_dir = data_dirs[: val_num]
+                    data_dirs = data_dirs[val_num:]
 
-        for file_name in os.listdir(root):
+        for file_name in data_dirs:
             self.data.append(self.loader(os.path.join(root, file_name)))
             if mode == "val" or mode == 'train':
                 l = file_name.split("_")[3].split('.')[0]
@@ -82,6 +92,8 @@ class DataSetFolder(Dataset):
             else:
                 raise Exception('Mode is invalid!')
             self.label.append(labels)
+
+        return val_dir
 
     def __getitem__(self, item):
         return self.data[item], self.label[item]
@@ -100,7 +112,7 @@ class SubRandomDataSetFolder(Dataset):
         self._name = None
         self.num_classes, self.min_class, self.max_class = None, None, None
 
-    def load(self, root, mode='train', val_ratio=0, data_dirs=None):
+    def load(self, root, mode='train', val_ratio=None, data_dirs=None):
         self._name = root
         val_dir = None
         if data_dirs is None:
@@ -110,9 +122,10 @@ class SubRandomDataSetFolder(Dataset):
             if mode == 'train':
                 info_label = label_info(self._name + ".json")
                 self.num_classes, self.min_class, self.max_class = len(info_label[0]), info_label[1], info_label[2]
-                val_num = int(self.num*val_ratio)
-                val_dir = data_dirs[: val_num]
-                data_dirs = data_dirs[val_num:]
+                if val_ratio is not None:
+                    val_num = int(self.num*val_ratio)
+                    val_dir = data_dirs[: val_num]
+                    data_dirs = data_dirs[val_num:]
 
         self.num = len(data_dirs)
         for fname in data_dirs:

@@ -151,12 +151,15 @@ def main():
                         help="Root folder of the any outputs of the plot figures."
                              " Default is 'figures'."
                         )
-    parser.add_argument("-valratio", type=float, default=0.0,
+    parser.add_argument("-valratio", type=float, default=None,
                         help="Ratio for Train Set / Validation Set split")
+
     parser.add_argument("-batch", type=int, default=16,
                         help="Batch size of the train data")
+
     parser.add_argument("-lr", type=float, default=0.01,
                         help="Learning rate of the training optimizer")
+
     parser.add_argument("-momentum", type=float, default=0.9,
                         help="Momentum value of the SGD optimizer")
 
@@ -181,6 +184,16 @@ def main():
                              "if test is activated test will be applied to model. Default is single run of 50 epochs."
                              " Default is '0' which means disabled."
                         )
+
+    parser.add_argument("-subsample", type=int, default=0,
+                        help="if it is more than 0 it will sub sample the dataset as that number randomly.."
+                             " Default is '0' which means disabled."
+                        )
+    parser.add_argument("-dataset_type", type=str, default='default',
+                        help="Type of the datasets. subsampled or whole."
+                             "Whole folder dataset."
+                        )
+
     parser.add_argument("-test", action='store_true',
                         help="Evaluate test data set."
                         )
@@ -256,8 +269,6 @@ def main():
 
     if args.train > 0:
         operator.update_train_dataset(args.ftrain, args.batch, args.valratio)
-        if args.validation != 0:
-            operator.update_val_dataset(args.fval, args.batch)
 
         for i, epoch in enumerate(epochs):
             print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")
