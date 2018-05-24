@@ -767,3 +767,4 @@ class SqueezeNetModel(Model):
 
         if cuda:
             self.model.classifier = self.model.classifier.cuda()
+
