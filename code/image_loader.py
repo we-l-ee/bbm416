@@ -41,9 +41,10 @@ class DatasetText(Dataset):
         self.label_encoder = label_encoder
         self.loader = loader
         self.trained = []
+        self.len = 0
 
     def load(self, path, root='Images'):
-        with open(path,'r') as _in:
+        with open(path, 'r') as _in:
 
             for line in _in.readlines():
                 self.data.append(
@@ -69,16 +70,19 @@ class DataSetFolder(Dataset):
         self.label = []
         self.loader = loader
         self.trained = []
+        self.num_classes, self.min_class, self.max_class = None, None, None
+        self._name = None
 
     def load(self, root, mode="val", val_ratio=None, data_dirs=None):
         val_dir = None
+        self._name = root
         if data_dirs is None:
             data_dirs = os.listdir(root)
             if mode == 'train':
                 info_label = label_info(self._name + ".json")
                 self.num_classes, self.min_class, self.max_class = len(info_label[0]), info_label[1], info_label[2]
                 if val_ratio is not None:
-                    val_num = int(self.num*val_ratio)
+                    val_num = int(len(data_dirs)*val_ratio)
                     val_dir = data_dirs[: val_num]
                     data_dirs = data_dirs[val_num:]
 
