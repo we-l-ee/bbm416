@@ -234,7 +234,7 @@ class ModelOperator:
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
 
-    def predict_with_loss_layer(self, predictions, threshold=0.5):
+    def predict_with_loss_layer(self, predictions, threshold=0.5, return_binary=False):
         predictions = self.loss_layer_func(predictions).data.cpu().numpy()
         indices = np.argwhere(predictions > threshold)
         preds = len(predictions) * [None]
@@ -244,6 +244,13 @@ class ModelOperator:
                 preds[index].append(label)
             else:
                 preds[index] = [label]
+
+        if return_binary:
+            for i, pred in enumerate(preds):
+                temp_pred = np.zeros(predictions.shape[1])
+                for p in pred:
+                    temp_pred[p] = 1.0
+                preds[i] = temp_pred
         return preds
 
     def test(self, write=True):
@@ -331,12 +338,17 @@ class ModelOperator:
         if self.cuda:
             labels = labels.cuda()
 
-        err = self.cal_top_errors(outputs, labels)
+        best_threshold = find_f2score_threshold(outputs.data.cpu().numpy(), labels.data.cpu.numpy(), verbose=True)
+        predictions = self.predict_with_loss_layer(outputs, best_threshold, True)
+
+        # err = self.cal_top_errors(outputs, labels)
 
         self.eta.end()
         eta = self.eta.eta()
         curr_batch = min(iter * self._val_batch_size, self._val_set_len)
         bath_size = curr_batch - (iter - 1) * self._val_batch_size
+
+        err = [0, 0]
         err_per = 100 * err / bath_size
         print("Testing... [%d/%d (%.2f%%)]" % (
             curr_batch, self._test_set_len, 100 * iter / self.eta.totiter),
@@ -376,7 +388,7 @@ class Model(object):
         self.num_labels = num_labels
         self.model = model
         if data_set is None:
-            self.train_data_set = SubRandomDataSetFolder(200)
+            self.train_data_set = SubRandomDataSetFolder(20)
             self.val_data_set = SubRandomDataSetFolder()
             self.test_data_set = DataSetFolder()
 
