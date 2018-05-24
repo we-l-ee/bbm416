@@ -185,14 +185,24 @@ def main():
                              " Default is '0' which means disabled."
                         )
 
-    parser.add_argument("-subsample", type=int, default=0,
-                        help="if it is more than 0 it will sub sample the dataset as that number randomly.."
+    parser.add_argument("-trainsubsample", type=int, default=0,
+                        help="if it is more than 0 it will sub sample the train dataset as that number randomly.."
                              " Default is '0' which means disabled."
                         )
-    parser.add_argument("-dtype", type=str, default='default',
-                        help="Type of the datasets. subsampled or whole."
+    parser.add_argument("-traindtype", type=str, default='default',
+                        help="Type of the train datasets. subsampled or whole."
                              "Whole folder dataset."
                         )
+
+    parser.add_argument("-testsubsample", type=int, default=0,
+                        help="if it is more than 0 it will sub sample the test dataset as that number randomly.."
+                             " Default is '0' which means disabled."
+                        )
+    parser.add_argument("-testdtype", type=str, default='default',
+                        help="Type of the test datasets. subsampled or whole."
+                             "Whole folder test dataset."
+                        )
+
 
     parser.add_argument("-test", action='store_true',
                         help="Evaluate test data set."
@@ -268,7 +278,8 @@ def main():
         epochs = [args.train]
 
     if args.train > 0:
-        operator.update_train_dataset(args.ftrain, args.batch, args.valratio, dtype=args.dtype, subsample=args.subsample)
+        operator.update_train_dataset(args.ftrain, args.batch, args.valratio, dtype=args.traindtype,
+                                      subsample=args.trainsubsample)
 
         for i, epoch in enumerate(epochs):
             print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")
@@ -278,7 +289,7 @@ def main():
                 operator.validate(write=True)
 
     if args.test:
-        operator.update_test_dataset(args.ftest, args.batch)
+        operator.update_test_dataset(args.ftest, args.batch, args.testdtype, args.testsubsample)
         preds, ids = operator.test(write=True)
 
     if operator is not None:

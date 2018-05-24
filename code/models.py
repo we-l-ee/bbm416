@@ -8,11 +8,12 @@ from torch.utils.data import DataLoader
 import torchvision.models as models
 import torch
 from torch.nn.functional import sigmoid, softmax
-
+from sklearn.metrics import f1_score, accuracy_score
 
 # Model is main class which includes training, model loading, model saving, testing etc.
 # Train and test methods writes numpy data to outputs to be able to plot afterwards if it is wished.
-#
+
+
 class ModelOperator:
     def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True):
 
@@ -120,18 +121,9 @@ class ModelOperator:
         validation = None
         if val_ratio is not None:
             validation = DataSetFolder()
-
         self.model.createDatasets(train=train, validation=validation)
 
-
         val_dirs = self.model.train_data_set.load(train_path, mode='train', val_ratio=val_ratio)
-        if val_dirs is not None:
-            self.model.val_data_set.load(train_path, data_dirs=val_dirs)
-            self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
-
-            self._val_set_len = len(self.model.val_data_set)
-            self._val_batch_size = batch_size
-
 
         self.model.adjust_last_layer(cuda=self.cuda)
         self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
@@ -139,6 +131,15 @@ class ModelOperator:
 
         self._train_batch_size = batch_size
         self._train_set_len = len(self.model.train_data_set)
+        if val_dirs is not None:
+            self.model.val_data_set.update_label_info(self.model.train_data_set.num_classes, self.model.train_data_set.
+                                                      min_class, self.model.train_data_set.max_class)
+
+            self.model.val_data_set.load(train_path, data_dirs=val_dirs)
+            self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
+
+            self._val_set_len = len(self.model.val_data_set)
+            self._val_batch_size = batch_size
 
     def train(self, epoch=5, lr=0.001, momentum=0.9, write=True):
         if epoch == 0:
@@ -196,18 +197,16 @@ class ModelOperator:
         inputs, labels = data
 
         inputs, targets = self.variable(inputs, labels)
-
         optimizer.zero_grad()
-
         outputs = self.model.model(inputs)
 
         # err = self.cal_top_errors(outputs, targets)
         err = np.array([0, 0])
-        # To get best targets for criterion method. For feature use if there is more than one loss function option.
-        outputs, targets = self.func_target(outputs, targets)
 
+        outputs, targets = self.func_target(outputs, targets)
         loss = self.criterion(outputs, targets.detach().float())
         loss.backward()
+
         optimizer.step()
 
         loss = loss.cpu()
@@ -222,10 +221,13 @@ class ModelOperator:
               "ETA: %.2f min" % eta)
         return tot_loss, err
 
-    def update_test_dataset(self, test_path='test', batch_size=16):
+    def update_test_dataset(self, test_path='test', batch_size=16, dtype='default', subsample=0):
         print("Test dataset is loading...")
 
-        self.model.createDatasets(test=DataSetFolder())
+        if dtype == 'subrandom':
+            self.model.createDatasets(test=SubRandomDataSetFolder(subsample))
+        elif dtype == 'default':
+            self.model.createDatasets(test=DataSetFolder())
 
         self.model.test_data_set.load(test_path, mode="test")
 
@@ -235,7 +237,7 @@ class ModelOperator:
         self._test_batch_size = batch_size
 
     def predict_with_loss_layer(self, predictions, threshold=0.5, return_binary=False):
-        predictions = self.loss_layer_func(predictions).data.cpu().numpy()
+        predictions = self.loss_layer_func(predictions).detach().cpu().numpy()
         indices = np.argwhere(predictions > threshold)
         preds = len(predictions) * [None]
         for ind in indices:
@@ -247,11 +249,14 @@ class ModelOperator:
 
         if return_binary:
             for i, pred in enumerate(preds):
-                temp_pred = np.zeros(predictions.shape[1])
+                temp_pred = np.zeros(predictions.shape[1], dtype=np.int)
+                if pred is None:
+                    preds[i] = temp_pred
+                    continue
                 for p in pred:
-                    temp_pred[p] = 1.0
+                    temp_pred[p] = 1
                 preds[i] = temp_pred
-        return preds
+        return np.array(preds)
 
     def test(self, write=True):
         self.eta.set_epoch(0)
@@ -299,23 +304,29 @@ class ModelOperator:
 
         return outputs
 
-
     def validate(self, write=True):
         self.eta.set_epoch(0)
         self.eta.set_totiter(math.ceil(self._val_set_len / self._val_batch_size))
 
         self.model.model.eval()
 
-        err = np.array([0, 0])
+        scores = np.array([.0, .0])
+        thresholds = []
         print("Validation starting...")
         for i, data in enumerate(self.val_loader):
-            err += self.__iter_val(i, data)
-        err = 100 * err / self._val_set_len
-        self.info.append(['test', [err[0], err[1]]])
+            score, threshold = self.__iter_val(i, data)
+            scores += score
+            thresholds.append(threshold)
 
+        scores = 100 * scores / self._val_set_len
+        self.info.append(['test', [scores[0], scores[1]]])
+
+        average_threshold = np.mean(thresholds)
+        if average_threshold > self.model.best_threshold:
+            self.model.best_threshold = average_threshold
         if write:
             curr = os.path.join(self.output_path, self.name)
-            save = {'type': 'val', 'error': err}
+            save = {'type': 'val', 'scores': scores}
             if os.path.isfile(curr + '.npy'):
                 prev = np.load(curr + ".npy")
                 prev = prev.tolist()
@@ -324,7 +335,7 @@ class ModelOperator:
             prev.append(save)
             np.save(curr, prev)
 
-        print("Error percentages of validation [%.2f %.2f]" % (err[0], err[1]))
+        print("Percentages of hamming score and subset score [%.2f %.2f]" % (scores[0], scores[1]))
         print("Validation ended!")
 
     def __iter_val(self, iter, data):
@@ -338,23 +349,23 @@ class ModelOperator:
         if self.cuda:
             labels = labels.cuda()
 
-        best_threshold = find_f2score_threshold(outputs.data.cpu().numpy(), labels.data.cpu.numpy(), verbose=True)
+        labels = labels.detach().numpy()
+        best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
         predictions = self.predict_with_loss_layer(outputs, best_threshold, True)
-
-        # err = self.cal_top_errors(outputs, labels)
+        h_score = hamming_score(labels, predictions)
+        subset_accuracy = f1_score(labels, predictions, average='samples')
 
         self.eta.end()
         eta = self.eta.eta()
         curr_batch = min(iter * self._val_batch_size, self._val_set_len)
         bath_size = curr_batch - (iter - 1) * self._val_batch_size
 
-        err = [0, 0]
-        err_per = 100 * err / bath_size
-        print("Testing... [%d/%d (%.2f%%)]" % (
-            curr_batch, self._test_set_len, 100 * iter / self.eta.totiter),
-              "| Error percentages [%.2f %.2f]" % (err_per[0], err_per[1]), "ETA: %.2f min" % (eta))
+        scores = np.array([h_score, subset_accuracy])
+        score_per = 100 * scores / bath_size
+        print("Validating... [%d/%d (%.2f%%)]" % (curr_batch, self._val_set_len, 100 * iter / self.eta.totiter),
+              "| Hamming score and f1 score = [%.2f %.2f]" % (score_per[0], score_per[1]), "ETA: %.2f min" % (eta))
 
-        return err
+        return scores, best_threshold
 
     def freeze(self, ind):
         self.is_freeze = True
@@ -372,15 +383,6 @@ class ModelOperator:
             param.requires_grad = True
             print(param.size(), 'unfreezed.')
 
-    def cal_top_errors(self, o, t):
-        _, p = torch.topk(o, 5)
-        top1 = (p[:, 0] != t).sum().cpu().item()
-        top5 = 0
-        for i, ti in enumerate(t):
-            top5 += int(ti not in p[i])
-
-        return np.array([top1, top5])
-
 
 class Model(object):
     def __init__(self, model, num_labels, parameters, data_set=None):
@@ -395,7 +397,7 @@ class Model(object):
             self.test_data_set = SubRandomDataSetFolder(2)
 
         self.parameters = parameters
-
+        self.best_threshold = 0
 
     def createDatasets(self, **kwargs):
         # if type == 'subrandom':
@@ -414,7 +416,7 @@ class Model(object):
         if 'train' in kwargs:
             self.train_data_set = kwargs['train']
         if 'validation' in kwargs:
-            self.val_data_set =  kwargs['validation']
+            self.val_data_set = kwargs['validation']
         if 'test' in kwargs:
             self.test_data_set = kwargs['test']
 
@@ -434,20 +436,22 @@ class Model(object):
 
     def save(self, loc):
         torch.save(self.model.state_dict(), loc + ".pt")
-        np.save(loc, [self.num_labels])
+        np.save(loc, [self.num_labels, self.best_threshold])
 
     def adjust_last_layer(self, mode="train", cuda=True):
         raise NotImplementedError("Implement adjust_last_layer method")
 
     @staticmethod
     def load(args, clazz, loc):
-
-        num_labels = np.load(loc + ".npy")[0]
+        params = np.load(loc + ".npy")
+        num_labels, best_threshold = params[0], params[1]
 
         model = clazz.models[args[0]](pretrained=False)
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
-        return clazz(model, num_labels, args)
+        model_ = clazz(model, num_labels, args)
+        model_.best_threshold = best_threshold
+        return model_
 
 
 class VGGModel(Model):

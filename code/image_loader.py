@@ -73,6 +73,9 @@ class DataSetFolder(Dataset):
         self.num_classes, self.min_class, self.max_class = None, None, None
         self._name = None
 
+    def update_label_info(self, num_classes, min_class, max_class):
+        self.num_classes, self.min_class, self.max_class = num_classes, min_class, max_class
+
     def load(self, root, mode="val", val_ratio=None, data_dirs=None):
         val_dir = None
         self._name = root
@@ -89,8 +92,7 @@ class DataSetFolder(Dataset):
         for file_name in data_dirs:
             self.data.append(self.loader(os.path.join(root, file_name)))
             if mode == "val" or mode == 'train':
-                l = file_name.split("_")[3].split('.')[0]
-                labels = [int(i)-1 for i in l[1:-1].split(',')]
+                labels = self.__get_labels(file_name)
             elif mode == "test":
                 labels = int(file_name.split('.')[0])
             else:
@@ -98,6 +100,15 @@ class DataSetFolder(Dataset):
             self.label.append(labels)
 
         return val_dir
+
+    def __get_labels(self, fname):
+        l = fname.split("_")[3].split('.')[0]
+        labels = [int(i.strip()) for i in l[1:-1].split(',')]
+
+        temp_labels = np.zeros(self.max_class - self.min_class + 1)
+        for label in labels:
+            temp_labels[label - self.min_class] = 1.0
+        return torch.from_numpy(temp_labels)
 
     def __getitem__(self, item):
         return self.data[item], self.label[item]
