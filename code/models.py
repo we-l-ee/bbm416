@@ -347,7 +347,7 @@ class ModelOperator:
 
         outputs = self.model.model(inputs)
         if self.cuda:
-            labels = labels.cuda()
+            outputs = outputs.cpu()
 
         labels = labels.detach().numpy()
         best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)

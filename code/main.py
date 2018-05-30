@@ -235,6 +235,9 @@ def main():
     parser.add_argument("-batch_norm", action='store_true',
                         help="Activates batch_normalization. It can only be used when new model is initialized")
 
+
+    random.seed(time.time())
+
     # print(sys.argv)
     args = parser.parse_args(sys.argv[1:])
     print(args)
