@@ -36,8 +36,6 @@ def find_f2score_threshold(p_valid, y_valid, try_all=False, verbose=False):
         print('Best score: ', round(best_score, 5), ' @ threshold =', best)
     return best
 
-# best_threshold = find_f2score_threshold(y_pred, y_true, verbose=True)
-
 
 def label_info(path='train.json'):
     with open(path) as f:

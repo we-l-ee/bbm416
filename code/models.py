@@ -53,6 +53,14 @@ class ModelOperator:
         self.test_loader = None
         self.val_loader = None
 
+        self.scores = {'threshold_5': list(),
+                       'threshold_6': list(),
+                       'threshold_7': list(),
+                       'threshold_8': list(),
+                       'threshold_9': list(),
+                       'best_threshold': list(),
+                       'top_label': list()}
+
         print("Model Initialized.")
 
     def __default_loss_layer_func(self, preds):
@@ -70,6 +78,10 @@ class ModelOperator:
         elif loss == 'mlsm':
             self.func_target = self.__mlsm_output_target
             self.criterion = torch.nn.MultiLabelSoftMarginLoss()
+            self.loss_layer_func = sigmoid
+        elif loss == 'bce':
+            self.func_target = self.__mlsm_output_target
+            self.criterion = torch.nn.BCEWithLogitsLoss()
             self.loss_layer_func = sigmoid
 
     def __variable_cuda(self, inputs, labels, requires_grad=True):
@@ -118,16 +130,22 @@ class ModelOperator:
         elif dtype == 'default':
             train = DataSetFolder()
 
+        elif dtype == 'lazy':
+            train = LazyLoaderDataSet(subsample)
+
         validation = None
         if val_ratio is not None:
-            validation = DataSetFolder()
-        self.model.createDatasets(train=train, validation=validation)
+            if dtype == 'lazy':
+                validation = LazyLoaderDataSet()
+            else:
+                validation = DataSetFolder()
+        self.model.create_datasets(train=train, validation=validation)
 
         val_dirs = self.model.train_data_set.load(train_path, mode='train', val_ratio=val_ratio)
 
         self.model.adjust_last_layer(cuda=self.cuda)
         self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
-                                                        num_workers=0)
+                                                        num_workers=4)
 
         self._train_batch_size = batch_size
         self._train_set_len = len(self.model.train_data_set)
@@ -135,8 +153,8 @@ class ModelOperator:
             self.model.val_data_set.update_label_info(self.model.train_data_set.num_classes, self.model.train_data_set.
                                                       min_class, self.model.train_data_set.max_class)
 
-            self.model.val_data_set.load(train_path, data_dirs=val_dirs)
-            self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
+            self.model.val_data_set.load(train_path, mode='val', data_dirs=val_dirs)
+            self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=4)
 
             self._val_set_len = len(self.model.val_data_set)
             self._val_batch_size = batch_size
@@ -156,23 +174,21 @@ class ModelOperator:
         # optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.model.parameters()), lr=lr)
 
         losses = []
-        errs = []
         for e in range(1, epoch + 1):
             e_loss = []
             total_loss = 0.0
             err = np.array([0, 0])
             for i, data in enumerate(self.train_loader):
-                total_loss, _err = self.__iter_train(e, i + 1, data, total_loss, optimizer, e_loss)
-                err += _err
-            err = 100 * err / self._train_set_len
-            errs.append(err)
+                total_loss = self.__iter_train(e, i + 1, data, total_loss, optimizer, e_loss)
+
             print("Epoch", e, 'completed! Top 1 and 5 Error Percentage is [%.2f %.2f]' % (err[0], err[1]))
             losses.append(e_loss)
         print('Training Completed.')
 
         if write:
             curr_dir = os.path.join(self.output_path, self.name)
-            save = {'type': 'train', 'config': [self._train_batch_size, lr, momentum], 'loss': losses, 'error': errs}
+            save = {'type': 'train', 'config': [self._train_batch_size, lr, momentum], 'loss': losses,
+                    'scores': self.scores}
             if os.path.isfile(curr_dir + '.npy'):
                 prev = np.load(curr_dir + ".npy")
                 prev = prev.tolist()
@@ -191,6 +207,34 @@ class ModelOperator:
     def __mlsm_output_target(self, outputs, targets):
         return outputs, targets
 
+    def __set_score_threshold(self, outputs, labels, threshold, key):
+        predictions = self.predict_with_loss_layer(outputs, threshold, return_binary=True)
+        h_score = hamming_score(labels, predictions)
+        f1_ = f1_score(labels, predictions, average='samples')
+        self.scores[key].append([h_score, f1_])
+
+    def __set_scores(self, outputs, labels):
+        labels = labels.detach().numpy()
+        outputs_np = outputs.detach().numpy()
+
+        best_threshold = find_f2score_threshold(outputs_np, labels, verbose=True)
+
+        self.__set_score_threshold(outputs, labels, best_threshold, 'best_threshold')
+        self.__set_score_threshold(outputs, labels, 0.5, 'threshold_5')
+        self.__set_score_threshold(outputs, labels, 0.6, 'threshold_6')
+        self.__set_score_threshold(outputs, labels, 0.7, 'threshold_7')
+        self.__set_score_threshold(outputs, labels, 0.8, 'threshold_8')
+        self.__set_score_threshold(outputs, labels, 0.9, 'threshold_9')
+
+        target_indices = np.argwhere(labels == 1)
+        predict_indices = np.argpartition(outputs_np, -len(target_indices))[-len(target_indices):]
+        predicts = np.zeros_like(labels)
+        for ind in predict_indices:
+            predicts[ind] = 1
+        h_score = hamming_score(labels, predicts)
+        f1_ = f1_score(labels, predicts, average='samples')
+        self.scores['top_label'].append([h_score, f1_])
+
     def __iter_train(self, epoch, iter, data, tot_loss, optimizer, e_loss):
         self.eta.update(epoch, iter)
         self.eta.start()
@@ -199,9 +243,6 @@ class ModelOperator:
         inputs, targets = self.variable(inputs, labels)
         optimizer.zero_grad()
         outputs = self.model.model(inputs)
-
-        # err = self.cal_top_errors(outputs, targets)
-        err = np.array([0, 0])
 
         outputs, targets = self.func_target(outputs, targets)
         loss = self.criterion(outputs, targets.detach().float())
@@ -213,25 +254,29 @@ class ModelOperator:
         loss = loss.item()
 
         e_loss.append(loss)
+        self.__set_scores(outputs, targets)
+
         self.eta.end()
         eta = self.eta.eta()
         print("Epoch %d [%d/%d (%.2f%%)]" % (
             epoch, min(iter * self._train_batch_size, self._train_set_len), self._train_set_len,
             100 * iter / self.eta.totiter), "| Loss [%.6f]" % (e_loss[-1]),
               "ETA: %.2f min" % eta)
-        return tot_loss, err
+        return tot_loss
 
     def update_test_dataset(self, test_path='test', batch_size=16, dtype='default', subsample=0):
         print("Test dataset is loading...")
 
         if dtype == 'subrandom':
-            self.model.createDatasets(test=SubRandomDataSetFolder(subsample))
+            self.model.create_datasets(test=SubRandomDataSetFolder(subsample))
         elif dtype == 'default':
-            self.model.createDatasets(test=DataSetFolder())
+            self.model.create_datasets(test=DataSetFolder())
+        elif dtype == 'lazy':
+            self.model.create_datasets(test=LazyLoaderDataSet(subsample))
 
         self.model.test_data_set.load(test_path, mode="test")
 
-        self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=4)
 
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
@@ -335,7 +380,7 @@ class ModelOperator:
             prev.append(save)
             np.save(curr, prev)
 
-        print("Percentages of hamming score and subset score [%.2f %.2f]" % (scores[0], scores[1]))
+        print("Percentages of hamming score and f1 score [%.2f %.2f]" % (scores[0], scores[1]))
         print("Validation ended!")
 
     def __iter_val(self, iter, data):
@@ -353,15 +398,15 @@ class ModelOperator:
         best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
         predictions = self.predict_with_loss_layer(outputs, best_threshold, True)
         h_score = hamming_score(labels, predictions)
-        subset_accuracy = f1_score(labels, predictions, average='samples')
+        f1_ = f1_score(labels, predictions, average='samples')
 
         self.eta.end()
         eta = self.eta.eta()
         curr_batch = min(iter * self._val_batch_size, self._val_set_len)
-        bath_size = curr_batch - (iter - 1) * self._val_batch_size
+        batch_size = curr_batch - (iter - 1) * self._val_batch_size
 
-        scores = np.array([h_score, subset_accuracy])
-        score_per = 100 * scores / bath_size
+        scores = np.array([h_score, f1_])
+        score_per = 100 * scores / batch_size
         print("Validating... [%d/%d (%.2f%%)]" % (curr_batch, self._val_set_len, 100 * iter / self.eta.totiter),
               "| Hamming score and f1 score = [%.2f %.2f]" % (score_per[0], score_per[1]), "ETA: %.2f min" % (eta))
 
@@ -399,7 +444,7 @@ class Model(object):
         self.parameters = parameters
         self.best_threshold = 0
 
-    def createDatasets(self, **kwargs):
+    def create_datasets(self, **kwargs):
         # if type == 'subrandom':
         #     self.train_data_set = SubRandomDataSetFolder(200)
         #     if validation:

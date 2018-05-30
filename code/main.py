@@ -3,7 +3,7 @@ from models import *
 
 import argparse
 import gc
-
+import random
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
@@ -291,10 +291,6 @@ def main():
                 print("Validation of (", i + 1, "/", len(epochs), ") initializing...")
                 operator.validate(write=True)
 
-    if args.test:
-        operator.update_test_dataset(args.ftest, args.batch, args.testdtype, args.testsubsample)
-        preds, ids = operator.test(write=True)
-
     if operator is not None:
         operator.save_info()
     if args.save:
@@ -302,6 +298,10 @@ def main():
 
     if args.plot:
         plot_all(path.join(args.output_path, args.mname) + '.npy', args.figure_path, args.mname)
+
+    if args.test:
+        operator.update_test_dataset(args.ftest, args.batch, args.testdtype, args.testsubsample)
+        preds, ids = operator.test(write=True)
 
     return model
 
@@ -313,4 +313,6 @@ def main():
 
 # sys.argv.extend("-train 1 1 -test -lr 0.01 -batch 32 -loss mse -freeze -clip 0 26 -cuda".split())
 
-model = main()
+
+if __name__ == "__main__":
+    model = main()
