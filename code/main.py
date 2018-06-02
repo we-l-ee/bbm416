@@ -199,10 +199,13 @@ def main():
                              " Default is '0' which means disabled."
                         )
     parser.add_argument("-testdtype", type=str, default='lazy',
-                        help="Type of the test datasets. subsampled or whole."
+                        help="Type of the test dataset. sub-sampled or whole."
                              "Whole folder test dataset."
                         )
 
+    parser.add_argument("-optimizer", type=str, default='sgd',
+                        help="Type of the optimizer, default is 'sgd' which is Stochastic Gradient Descent"
+                        )
 
     parser.add_argument("-test", action='store_true',
                         help="Evaluate test data set."
@@ -286,7 +289,7 @@ def main():
 
         for i, epoch in enumerate(epochs):
             print("Training of (", i + 1, "/", len(epochs), ") with epoch [", epoch, "] initializing...")
-            operator.train(epoch=epoch, lr=args.lr, momentum=args.momentum, write=True)
+            operator.train(epoch=epoch, lr=args.lr, momentum=args.momentum, write=True, optimizer=args.optimizer)
             if args.validation != 0:
                 print("Validation of (", i + 1, "/", len(epochs), ") initializing...")
                 operator.validate(write=True)
