@@ -214,8 +214,8 @@ class ModelOperator:
         self.scores[key].append([h_score, f1_])
 
     def __set_scores(self, outputs, labels):
-        labels = labels.detach().numpy()
-        outputs_np = outputs.detach().numpy()
+        labels = labels.detach().cpu().numpy()
+        outputs_np = outputs.detach().cpu().numpy()
 
         best_threshold = find_f2score_threshold(outputs_np, labels, verbose=True)
 

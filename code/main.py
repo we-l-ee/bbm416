@@ -189,7 +189,7 @@ def main():
                         help="if it is more than 0 it will sub sample the train dataset as that number randomly.."
                              " Default is '0' which means disabled."
                         )
-    parser.add_argument("-traindtype", type=str, default='default',
+    parser.add_argument("-traindtype", type=str, default='lazy',
                         help="Type of the train datasets. subsampled or whole."
                              "Whole folder dataset."
                         )
@@ -198,7 +198,7 @@ def main():
                         help="if it is more than 0 it will sub sample the test dataset as that number randomly.."
                              " Default is '0' which means disabled."
                         )
-    parser.add_argument("-testdtype", type=str, default='default',
+    parser.add_argument("-testdtype", type=str, default='lazy',
                         help="Type of the test datasets. subsampled or whole."
                              "Whole folder test dataset."
                         )
@@ -298,6 +298,7 @@ def main():
 
     if args.plot:
         plot_all(path.join(args.output_path, args.mname) + '.npy', args.figure_path, args.mname)
+
 
     if args.test:
         operator.update_test_dataset(args.ftest, args.batch, args.testdtype, args.testsubsample)
