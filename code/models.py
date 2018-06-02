@@ -8,11 +8,10 @@ from torch.utils.data import DataLoader
 import torchvision.models as models
 import torch
 from torch.nn.functional import sigmoid, softmax
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score
 
-# Model is main class which includes training, model loading, model saving, testing etc.
+
 # Train and test methods writes numpy data to outputs to be able to plot afterwards if it is wished.
-
 
 class ModelOperator:
     def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True):
@@ -159,7 +158,24 @@ class ModelOperator:
             self._val_set_len = len(self.model.val_data_set)
             self._val_batch_size = batch_size
 
-    def train(self, epoch=5, lr=0.001, momentum=0.9, write=True):
+    def __get_optimizer(self, optim_str, lr, momentum):
+        if optim_str == 'sgd':
+            optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr, momentum=momentum)
+        elif optim_str == 'adam':
+            optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr)
+        elif optim_str == 'adagrad':
+            optimizer = optim.Adagrad(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr)
+        elif optim_str == 'adadelta':
+            optimizer = optim.Adadelta(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr)
+        elif optim_str == 'adamax':
+            optimizer = optim.Adamax(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr)
+        elif optim_str == 'asgd':
+            optimizer = optim.ASGD(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr)
+        else:
+            raise Exception('Wrong optimizer')
+        return optimizer
+
+    def train(self, epoch=5, lr=0.001, momentum=0.9, write=True, optimizer='sgd'):
         if epoch == 0:
             return
 
@@ -168,20 +184,14 @@ class ModelOperator:
         self.eta.set_epoch(epoch)
         self.eta.set_totiter(math.ceil(self._train_set_len / self._train_batch_size))
 
-        self.model.model.train()
-
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.model.model.parameters()), lr=lr, momentum=momentum)
-        # optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.model.parameters()), lr=lr)
-
+        self.model.train()
+        optimizer = self.__get_optimizer(optimizer, lr, momentum)
         losses = []
         for e in range(1, epoch + 1):
             e_loss = []
-            total_loss = 0.0
-            err = np.array([0, 0])
             for i, data in enumerate(self.train_loader):
-                total_loss = self.__iter_train(e, i + 1, data, total_loss, optimizer, e_loss)
-
-            print("Epoch", e, 'completed! Top 1 and 5 Error Percentage is [%.2f %.2f]' % (err[0], err[1]))
+                self.__iter_train(e, i + 1, data, optimizer, e_loss)
+            print("Epoch", e, 'completed!')
             losses.append(e_loss)
         print('Training Completed.')
 
@@ -196,7 +206,7 @@ class ModelOperator:
                 prev = []
             prev.append(save)
             np.save(curr_dir, prev)
-        self.info.append(['train', [epoch, self._train_batch_size, lr, momentum, err[0], err[1]]])
+        self.info.append(['train', [epoch, self._train_batch_size, lr, momentum, e_loss[0]]])
 
     def __mse_output_target(self, outputs, targets):
         return softmax(outputs, dim=1), targets
@@ -242,14 +252,14 @@ class ModelOperator:
         f1_ = f1_score(labels, predicts, average='samples')
         self.scores['top_label'].append([h_score, f1_])
 
-    def __iter_train(self, epoch, iter, data, tot_loss, optimizer, e_loss):
-        self.eta.update(epoch, iter)
+    def __iter_train(self, epoch, _iter, data, optimizer, e_loss):
+        self.eta.update(epoch, _iter)
         self.eta.start()
         inputs, labels = data
 
         inputs, targets = self.variable(inputs, labels)
         optimizer.zero_grad()
-        outputs = self.model.model(inputs)
+        outputs = self.model(inputs)
 
         outputs, targets = self.func_target(outputs, targets)
         loss = self.criterion(outputs, targets.detach().float())
@@ -266,10 +276,9 @@ class ModelOperator:
         self.eta.end()
         eta = self.eta.eta()
         print("Epoch %d [%d/%d (%.2f%%)]" % (
-            epoch, min(iter * self._train_batch_size, self._train_set_len), self._train_set_len,
-            100 * iter / self.eta.totiter), "| Loss [%.6f]" % (e_loss[-1]),
+            epoch, min(_iter * self._train_batch_size, self._train_set_len), self._train_set_len,
+            100 * _iter / self.eta.totiter), "| Loss [%.6f]" % (e_loss[-1]),
               "ETA: %.2f min" % eta)
-        return tot_loss
 
     def update_test_dataset(self, test_path='test', batch_size=16, dtype='default', subsample=0):
         print("Test dataset is loading...")
@@ -317,7 +326,7 @@ class ModelOperator:
         self.eta.set_epoch(0)
         self.eta.set_totiter(math.ceil(self._test_set_len / self._test_batch_size))
 
-        self.model.model.eval()
+        self.model.eval()
 
         predictions = list()
         ids = list()
@@ -342,20 +351,20 @@ class ModelOperator:
         print("Test ended!")
         return predictions, ids
 
-    def __iter_test(self, iter, data):
-        self.eta.update(0, iter)
+    def __iter_test(self, _iter, data):
+        self.eta.update(0, _iter)
         self.eta.start()
         inputs, _ = data
 
         inputs = Variable(inputs, requires_grad=False)
-        outputs = self.model.model(inputs)
+        outputs = self.model(inputs)
 
         self.eta.end()
         eta = self.eta.eta()
-        curr_batch = min(iter * self._test_batch_size, self._test_set_len)
+        curr_batch = min(_iter * self._test_batch_size, self._test_set_len)
 
         print("Testing... [%d/%d (%.2f%%)]" % (
-            curr_batch, self._test_set_len, 100 * iter / self.eta.totiter), "ETA: %.2f min" % (eta))
+            curr_batch, self._test_set_len, 100 * _iter / self.eta.totiter), "ETA: %.2f min" % eta)
 
         return outputs
 
@@ -363,7 +372,7 @@ class ModelOperator:
         self.eta.set_epoch(0)
         self.eta.set_totiter(math.ceil(self._val_set_len / self._val_batch_size))
 
-        self.model.model.eval()
+        self.model.eval()
 
         scores = np.array([.0, .0])
         thresholds = []
@@ -393,14 +402,14 @@ class ModelOperator:
         print("Percentages of hamming score and f1 score [%.2f %.2f]" % (scores[0], scores[1]))
         print("Validation ended!")
 
-    def __iter_val(self, iter, data):
-        self.eta.update(0, iter)
+    def __iter_val(self, _iter, data):
+        self.eta.update(0, _iter)
         self.eta.start()
         inputs, labels = data
 
         inputs, targets = self.variable(inputs, labels, requires_grad=False)
 
-        outputs = self.model.model(inputs)
+        outputs = self.model(inputs)
         if self.cuda:
             outputs = outputs.cpu()
 
@@ -412,20 +421,20 @@ class ModelOperator:
 
         self.eta.end()
         eta = self.eta.eta()
-        curr_batch = min(iter * self._val_batch_size, self._val_set_len)
-        batch_size = curr_batch - (iter - 1) * self._val_batch_size
+        curr_batch = min(_iter * self._val_batch_size, self._val_set_len)
+        batch_size = curr_batch - (_iter - 1) * self._val_batch_size
 
         scores = np.array([h_score, f1_])
         score_per = 100 * scores / batch_size
-        print("Validating... [%d/%d (%.2f%%)]" % (curr_batch, self._val_set_len, 100 * iter / self.eta.totiter),
-              "| Hamming score and f1 score = [%.2f %.2f]" % (score_per[0], score_per[1]), "ETA: %.2f min" % (eta))
+        print("Validating... [%d/%d (%.2f%%)]" % (curr_batch, self._val_set_len, 100 * _iter / self.eta.totiter),
+              "| Hamming score and f1 score = [%.2f %.2f]" % (score_per[0], score_per[1]), "ETA: %.2f min" % eta)
 
         return scores, best_threshold
 
     def freeze(self, ind):
         self.is_freeze = True
         self.clip = ind
-        param = list(self.model.model.parameters())
+        param = list(self.model.parameters())
         if ind[1] > len(param):
             ind[1] = len(param)
 
@@ -434,7 +443,7 @@ class ModelOperator:
             print('Layer', i, param[i].size(), 'freezed.')
 
     def unfreeze(self):
-        for param in self.model.model.parameters():
+        for param in self.model.parameters():
             param.requires_grad = True
             print(param.size(), 'unfreezed.')
 
@@ -451,23 +460,22 @@ class Model(object):
 
             self.test_data_set = SubRandomDataSetFolder(2)
 
-        self.parameters = parameters
+        self.params = parameters
         self.best_threshold = 0
 
+    def train(self):
+        self.model.train()
+
+    def eval(self):
+        self.model.test()
+
+    def parameters(self):
+        return self.model.parameters()
+
+    def __call__(self, inputs):
+        return self.model(inputs)
+
     def create_datasets(self, **kwargs):
-        # if type == 'subrandom':
-        #     self.train_data_set = SubRandomDataSetFolder(200)
-        #     if validation:
-        #         self.val_data_set = DataSetFolder()
-        #
-        #     self.test_data_set = SubRandomDataSetFolder(2)
-        #
-        # elif type == 'default':
-        #     self.train_data_set = DataSetFolder()
-        #     if validation:
-        #         self.val_data_set = DataSetFolder()
-        #
-        #     self.test_data_set = DataSetFolder()
         if 'train' in kwargs:
             self.train_data_set = kwargs['train']
         if 'validation' in kwargs:
@@ -483,9 +491,9 @@ class Model(object):
 
     def identifier(self):
         bargs = bytes()
-        for param in self.parameters[0:-1]:
+        for param in self.params[0:-1]:
             bargs += bytes(str(param), 'utf-8')+b' '
-        bargs += bytes(str(self.parameters[-1]), 'utf-8')
+        bargs += bytes(str(self.params[-1]), 'utf-8')
 
         return bytes(self.__class__.__name__, 'utf-8') + b' ' + bargs
 
