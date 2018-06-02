@@ -213,6 +213,17 @@ class ModelOperator:
         f1_ = f1_score(labels, predictions, average='samples')
         self.scores[key].append([h_score, f1_])
 
+    def __encode_top_labels(self, labels, outputs_np):
+        predicts = []
+        for i, lab in enumerate(labels):
+            target_indices = np.argwhere(lab == 1)
+            predict_indices = np.argpartition(outputs_np, -len(target_indices))[-len(target_indices):]
+            preds = np.zeros_like(lab)
+            for ind in predict_indices:
+                preds[ind] = 1
+            predicts.append(preds)
+        return np.array(predicts)
+
     def __set_scores(self, outputs, labels):
         labels = labels.detach().cpu().numpy()
         outputs_np = outputs.detach().cpu().numpy()
@@ -226,11 +237,7 @@ class ModelOperator:
         self.__set_score_threshold(outputs, labels, 0.8, 'threshold_8')
         self.__set_score_threshold(outputs, labels, 0.9, 'threshold_9')
 
-        target_indices = np.argwhere(labels == 1)
-        predict_indices = np.argpartition(outputs_np, -len(target_indices))[-len(target_indices):]
-        predicts = np.zeros_like(labels)
-        for ind in predict_indices:
-            predicts[ind] = 1
+        predicts = self.__encode_top_labels(labels, outputs_np)
         h_score = hamming_score(labels, predicts)
         f1_ = f1_score(labels, predicts, average='samples')
         self.scores['top_label'].append([h_score, f1_])
@@ -284,7 +291,10 @@ class ModelOperator:
     def predict_with_loss_layer(self, predictions, threshold=0.5, return_binary=False):
         predictions = self.loss_layer_func(predictions).detach().cpu().numpy()
         indices = np.argwhere(predictions > threshold)
-        preds = len(predictions) * [None]
+        return self.__encode_label_indices(predictions, indices, return_binary)
+
+    def __encode_label_indices(self, labels, indices, return_binary):
+        preds = len(labels) * [None]
         for ind in indices:
             index, label = ind[0], ind[1]
             if isinstance(preds[index], list):
@@ -294,7 +304,7 @@ class ModelOperator:
 
         if return_binary:
             for i, pred in enumerate(preds):
-                temp_pred = np.zeros(predictions.shape[1], dtype=np.int)
+                temp_pred = np.zeros(labels.shape[1], dtype=np.int)
                 if pred is None:
                     preds[i] = temp_pred
                     continue
