@@ -111,9 +111,7 @@ class ModelOperator:
                                                                                            b'Learning rate: %f' %
                                 output[2] + b'\t|\t'
                                             b'Momentum: %f' % output[3] + b'\t|\t'
-                                                                          b'Top 1 Error: %.2f' % output[4] + b'\t|\t'
-                                                                                                             b'Top 5 Error: %.2f' %
-                                output[5] + b'\n')
+                                                                          b'Last Loss: %.2f' % output[4] + b'\n')
                 elif action == "test":
                     finfo.write(b"Test:\n")
                     finfo.write(b'Error Top 1 %.2f%%' % output[0] + b'\t|\t'
