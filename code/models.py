@@ -467,7 +467,7 @@ class Model(object):
         self.model.train()
 
     def eval(self):
-        self.model.test()
+        self.model.eval()
 
     def parameters(self):
         return self.model.parameters()
