@@ -419,8 +419,8 @@ class ModelOperator:
             outputs = outputs.cpu()
 
         labels = labels.detach().numpy()
-        # best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
-        best_threshold = 0.5
+        best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
+        # best_threshold = 0.5
         predictions = self.predict_with_loss_layer(outputs, best_threshold, True)
         h_score = hamming_score(labels, predictions)
         f1_ = f1_score(labels, predictions, average='samples')
