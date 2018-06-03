@@ -222,14 +222,14 @@ class ModelOperator:
             predicts = self.__encode_top_labels(labels, outputs)
             h_score = hamming_score(labels, predicts)
             f1_ = f1_score(labels, predicts, average='samples')
-            print("hs-f1[%.2f %.2f] @ top labels" % (h_score * 100, f1_ * 100))
+            print("hs-f1[%.2f %.2f] top labels" % (h_score * 100, f1_ * 100))
             return
         predictions = self.predict_with_loss_layer(outputs, threshold, return_binary=True)
         h_score = hamming_score(labels, predictions)
         f1_ = f1_score(labels, predictions, average='samples')
         self.scores[key].append([h_score, f1_])
-        print("hs-f1[%.2f %.2f] @ t:%.2f" %
-              (h_score * 100, f1_ * 100, threshold), end='//')
+        print("hs-f1[%.2f %.2f] t:%.2f" %
+              (h_score * 100, f1_ * 100, threshold), end='@')
 
     def __encode_top_labels(self, labels, outputs_np):
         predicts = []
