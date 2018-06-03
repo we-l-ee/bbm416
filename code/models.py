@@ -228,8 +228,8 @@ class ModelOperator:
         h_score = hamming_score(labels, predictions)
         f1_ = f1_score(labels, predictions, average='samples')
         self.scores[key].append([h_score, f1_])
-        print("hs-f1[%.2f %.2f] @ best threshold:%f" %
-              (h_score * 100, f1_ * 100, threshold), end='--')
+        print("hs-f1[%.2f %.2f] @ t:%.2f" %
+              (h_score * 100, f1_ * 100, threshold), end='//')
 
     def __encode_top_labels(self, labels, outputs_np):
         predicts = []
