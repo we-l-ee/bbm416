@@ -134,11 +134,6 @@ def main():
                              " Default is '../dataset/test'."
                         )
 
-    # parser.add_argument("-fval", default='../dataset/validation',
-    #                     help="Folder which has validation data."
-    #                          " Default is '../dataset/validation'."
-    #                     )
-
     parser.add_argument("-model_path", default='models',
                         help="Root folder of the stored models."
                              " Default is 'models'."
@@ -191,7 +186,7 @@ def main():
                         )
     parser.add_argument("-traindtype", type=str, default='lazy',
                         help="Type of the train datasets. subsampled or whole."
-                             "Whole folder dataset."
+                             "Whole folder dataset. Default is -lazy"
                         )
 
     parser.add_argument("-testsubsample", type=int, default=0,
@@ -238,12 +233,11 @@ def main():
     parser.add_argument("-batch_norm", action='store_true',
                         help="Activates batch_normalization. It can only be used when new model is initialized")
 
-
     random.seed(time.time())
 
-    # print(sys.argv)
     args = parser.parse_args(sys.argv[1:])
-    print(args)
+    for arg in vars(args):
+        print(arg, '=', getattr(args, arg))
 
     if args.mkdir:
         try:
@@ -275,7 +269,7 @@ def main():
 
     if args.validation != 0:
         if args.validation > args.train:
-            raise Exception("Tests instances can`t be bigger than epochs.")
+            raise Exception("Validation instances can`t be bigger than epochs.")
         _iter = int(args.train/args.validation)
         epochs = [args.validation for _ in range(_iter)]
         if args.train % args.validation != 0:
@@ -301,7 +295,6 @@ def main():
 
     if args.plot:
         plot_all(path.join(args.output_path, args.mname) + '.npy', args.figure_path, args.mname)
-
 
     if args.test:
         operator.update_test_dataset(args.ftest, args.batch, args.testdtype, args.testsubsample)

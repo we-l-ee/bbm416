@@ -58,7 +58,7 @@ class ModelOperator:
                        'threshold_8': list(),
                        'threshold_9': list(),
                        'best_threshold': list(),
-                       'top_label': list()}
+                       'top_labels': list()}
 
         print("Model Initialized.")
 
@@ -129,6 +129,8 @@ class ModelOperator:
 
         elif dtype == 'lazy':
             train = LazyLoaderDataSet(subsample)
+        else:
+            raise Exception('Wrong type of dataset loading!!')
 
         validation = None
         if val_ratio is not None:
@@ -204,7 +206,7 @@ class ModelOperator:
                 prev = []
             prev.append(save)
             np.save(curr_dir, prev)
-        self.info.append(['train', [epoch, self._train_batch_size, lr, momentum, e_loss[0]]])
+        self.info.append(['train', [epoch, self._train_batch_size, lr, momentum, losses[0][0]]])
 
     def __mse_output_target(self, outputs, targets):
         return softmax(outputs, dim=1), targets
@@ -216,10 +218,18 @@ class ModelOperator:
         return outputs, targets
 
     def __set_score_threshold(self, outputs, labels, threshold, key):
+        if threshold == 'top':
+            predicts = self.__encode_top_labels(labels, outputs)
+            h_score = hamming_score(labels, predicts)
+            f1_ = f1_score(labels, predicts, average='samples')
+            print("Percentages of hamming score and f1 score [%.2f %.2f] @ top labels" % (h_score * 100, f1_ * 100))
+            return
         predictions = self.predict_with_loss_layer(outputs, threshold, return_binary=True)
         h_score = hamming_score(labels, predictions)
         f1_ = f1_score(labels, predictions, average='samples')
         self.scores[key].append([h_score, f1_])
+        print("Percentages of hamming score and f1 score [%.2f %.2f] @ best threshold:%f" %
+              (h_score * 100, f1_ * 100, threshold), end='-')
 
     def __encode_top_labels(self, labels, outputs_np):
         predicts = []
@@ -244,11 +254,7 @@ class ModelOperator:
         self.__set_score_threshold(outputs, labels, 0.7, 'threshold_7')
         self.__set_score_threshold(outputs, labels, 0.8, 'threshold_8')
         self.__set_score_threshold(outputs, labels, 0.9, 'threshold_9')
-
-        predicts = self.__encode_top_labels(labels, outputs_np)
-        h_score = hamming_score(labels, predicts)
-        f1_ = f1_score(labels, predicts, average='samples')
-        self.scores['top_label'].append([h_score, f1_])
+        self.__set_score_threshold(outputs_np, labels, 'top', 'top_labels')
 
     def __iter_train(self, epoch, _iter, data, optimizer, e_loss):
         self.eta.update(epoch, _iter)
@@ -380,7 +386,7 @@ class ModelOperator:
             scores += score
             thresholds.append(threshold)
 
-        scores = 100 * scores / self._val_set_len
+        scores_per = 100 * scores / len(self.val_loader)
         self.info.append(['test', [scores[0], scores[1]]])
 
         average_threshold = np.mean(thresholds)
@@ -397,7 +403,8 @@ class ModelOperator:
             prev.append(save)
             np.save(curr, prev)
 
-        print("Percentages of hamming score and f1 score [%.2f %.2f]" % (scores[0], scores[1]))
+        print("Percentages of hamming score and f1 score [%.2f %.2f] @ best threshold:%f" %
+              (scores_per[0], scores_per[1], self.model.best_threshold))
         print("Validation ended!")
 
     def __iter_val(self, _iter, data):
@@ -412,7 +419,8 @@ class ModelOperator:
             outputs = outputs.cpu()
 
         labels = labels.detach().numpy()
-        best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
+        # best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
+        best_threshold = 0.5
         predictions = self.predict_with_loss_layer(outputs, best_threshold, True)
         h_score = hamming_score(labels, predictions)
         f1_ = f1_score(labels, predictions, average='samples')
@@ -420,10 +428,9 @@ class ModelOperator:
         self.eta.end()
         eta = self.eta.eta()
         curr_batch = min(_iter * self._val_batch_size, self._val_set_len)
-        batch_size = curr_batch - (_iter - 1) * self._val_batch_size
 
         scores = np.array([h_score, f1_])
-        score_per = 100 * scores / batch_size
+        score_per = 100 * scores
         print("Validating... [%d/%d (%.2f%%)]" % (curr_batch, self._val_set_len, 100 * _iter / self.eta.totiter),
               "| Hamming score and f1 score = [%.2f %.2f]" % (score_per[0], score_per[1]), "ETA: %.2f min" % eta)
 
@@ -832,4 +839,3 @@ class SqueezeNetModel(Model):
 
         if cuda:
             self.model.classifier = self.model.classifier.cuda()
-

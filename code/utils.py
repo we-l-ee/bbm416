@@ -33,7 +33,7 @@ def find_f2score_threshold(p_valid, y_valid, try_all=False, verbose=False):
             best_score = score
             best = t
     if verbose is True:
-        print('Best score: ', round(best_score, 5), ' @ threshold =', best)
+        print('Finding Threshold-> Best score: ', round(best_score, 5), ' @ threshold =', best)
     return best
 
 
