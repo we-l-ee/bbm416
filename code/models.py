@@ -14,7 +14,7 @@ from sklearn.metrics import f1_score
 # Train and test methods writes numpy data to outputs to be able to plot afterwards if it is wished.
 
 class ModelOperator:
-    def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True):
+    def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True, threshold='global'):
 
         self.model = model
         if cuda:
@@ -60,6 +60,14 @@ class ModelOperator:
                        'best_threshold': list(),
                        'top_labels': list()}
 
+        if threshold == 'global':
+            self.find_threshold = find_f2score_threshold
+            self.__predict_th = self.predict_with_loss_layer
+        elif threshold == 'label':
+            self.find_threshold = get_prediction_each_label_threshold
+            self.__predict_th = self.predict_with_loss_layer
+        else:
+            raise Exception("Wrong thresholding type!")
         print("Model Initialized.")
 
     def __default_loss_layer_func(self, preds):
@@ -79,8 +87,8 @@ class ModelOperator:
             self.criterion = torch.nn.MultiLabelSoftMarginLoss()
             self.loss_layer_func = sigmoid
         elif loss == 'bce':
-            self.func_target = self.__mlsm_output_target
-            self.criterion = torch.nn.BCEWithLogitsLoss()
+            self.func_target = self.__bce_output_target
+            self.criterion = torch.nn.BCELoss()
             self.loss_layer_func = sigmoid
 
     def __variable_cuda(self, inputs, labels, requires_grad=True):
@@ -216,6 +224,9 @@ class ModelOperator:
 
     def __mlsm_output_target(self, outputs, targets):
         return outputs, targets
+
+    def __bce_output_target(self, outputs, targets):
+        return sigmoid(outputs), targets
 
     def __set_score_threshold(self, outputs, labels, threshold, key):
         if threshold == 'top':
@@ -387,11 +398,11 @@ class ModelOperator:
             thresholds.append(threshold)
 
         scores_per = 100 * scores / len(self.val_loader)
-        self.info.append(['test', [scores[0], scores[1]]])
+        self.info.append(['validation', [scores[0], scores[1]]])
 
         average_threshold = np.mean(thresholds)
-        if average_threshold > self.model.best_threshold:
-            self.model.best_threshold = average_threshold
+        self.model.best_threshold = average_threshold
+
         if write:
             curr = os.path.join(self.output_path, self.name)
             save = {'type': 'val', 'scores': scores}
@@ -407,7 +418,7 @@ class ModelOperator:
               (scores_per[0], scores_per[1], self.model.best_threshold))
         print("Validation ended!")
 
-    def __iter_val(self, _iter, data):
+    def __iter_val(self, _iter, data, threshold='global'):
         self.eta.update(0, _iter)
         self.eta.start()
         inputs, labels = data
@@ -419,9 +430,11 @@ class ModelOperator:
             outputs = outputs.cpu()
 
         labels = labels.detach().numpy()
-        best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
-        # best_threshold = 0.5
+
+        best_threshold = self.find_threshold(outputs.detach().numpy(), labels, verbose=True)
+        # best_threshold = .5
         predictions = self.predict_with_loss_layer(outputs, best_threshold, True)
+
         h_score = hamming_score(labels, predictions)
         f1_ = f1_score(labels, predictions, average='samples')
 
