@@ -514,9 +514,10 @@ class Model(object):
         params = np.load(loc + ".npy")
         num_labels, best_threshold = params[0], params[1]
 
-        model = clazz.models[args[0]](pretrained=False)
+        model = clazz.models[args[0]](pretrained=False, num_classes = int(num_labels))
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
+
         model_ = clazz(model, num_labels, args)
         model_.best_threshold = best_threshold
         return model_
@@ -609,11 +610,11 @@ class VGGModel(Model):
 
 class ResNetModel(Model):
 
-    models = {"18": models.resnet18,
-              "34": models.resnet34,
-              "50": models.resnet50,
-              "101": models.resnet101,
-              "152": models.resnet152}
+    models = {b"18": models.resnet18,
+              b"34": models.resnet34,
+              b"50": models.resnet50,
+              b"101": models.resnet101,
+              b"152": models.resnet152}
 
     def __init__(self, model, num_labels, parameters, data_set=None):
         super(ResNetModel, self).__init__(model, num_labels, parameters, data_set)
@@ -744,7 +745,7 @@ class GoogLeNetModel(Model):
     def init_v3(num_labels=1000, pretrained=True, data_set=None):
 
         model = GoogLeNetModel.models["v3"](pretrained=pretrained)
-        parameters = ["18"]
+        parameters = [b"18"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
 

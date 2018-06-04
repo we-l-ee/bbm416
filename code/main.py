@@ -256,7 +256,7 @@ def main():
     operator = None
     model = None
     if args.load is not None:
-        model = load(args.model_path, args.name)
+        model = load(args.model_path, args.load)
 
     elif args.train > 0 or args.test:
         model = init(args.type, args.batch_norm)
