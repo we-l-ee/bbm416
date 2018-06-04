@@ -1,7 +1,35 @@
 import time
 import numpy as np
 import json
-from sklearn.metrics import fbeta_score
+from sklearn.metrics import fbeta_score, matthews_corrcoef
+
+
+def best_threshold_separately(outputs, targets, verbose=False):
+    threshold = np.arange(0.1, 0.9, 0.1)
+
+    acc = []
+    accuracies = []
+    best_threshold = np.zeros(outputs.shape[1])
+    for i in range(outputs.shape[1]):
+        y_prob = np.array(outputs[:, i])
+        for j in threshold:
+            y_pred = [1 if prob >= j else 0 for prob in y_prob]
+            acc.append(matthews_corrcoef(targets[:, i], y_pred))
+        acc = np.array(acc)
+        index = np.where(acc == acc.max())
+        accuracies.append(acc.max())
+        best_threshold[i] = threshold[index[0][0]]
+        acc = []
+    if verbose:
+        print("Matthews Correlation Coefficient")
+        print("Class wise accuracies")
+        print(accuracies)
+    return best_threshold
+
+
+def get_prediction_each_label_threshold(outputs, best_threshold):
+    return np.array([[1 if outputs[i, j] >= best_threshold[j] else 0
+                    for j in range(outputs.shape[1])] for i in range(len(outputs))])
 
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):

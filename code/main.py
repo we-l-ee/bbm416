@@ -299,7 +299,7 @@ def main():
     if args.test:
         operator.update_test_dataset(args.ftest, args.batch, args.testdtype, args.testsubsample)
         preds, ids = operator.test(write=True)
-
+        np.save("test.npy", [preds, ids])
     return model
 
 # sys.argv.extend("-train 1 -save -lr 0.01 -batch 16 -freeze -clip 0 26 -mname vgg-mse-10.32 -cuda".split())

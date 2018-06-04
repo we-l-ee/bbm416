@@ -60,6 +60,14 @@ class ModelOperator:
                        'best_threshold': list(),
                        'top_labels': list()}
 
+        if threshold == 'global':
+            self.find_threshold = find_f2score_threshold
+            self.__predict_th = self.predict_with_loss_layer
+        elif threshold == 'label':
+            self.find_threshold = get_prediction_each_label_threshold
+            self.__predict_th = self.predict_with_loss_layer
+        else:
+            raise Exception("Wrong thresholding type!")
         print("Model Initialized.")
 
     def __default_loss_layer_func(self, preds):
@@ -79,8 +87,8 @@ class ModelOperator:
             self.criterion = torch.nn.MultiLabelSoftMarginLoss()
             self.loss_layer_func = sigmoid
         elif loss == 'bce':
-            self.func_target = self.__mlsm_output_target
-            self.criterion = torch.nn.BCEWithLogitsLoss()
+            self.func_target = self.__bce_output_target
+            self.criterion = torch.nn.BCELoss()
             self.loss_layer_func = sigmoid
 
     def __variable_cuda(self, inputs, labels, requires_grad=True):
@@ -216,6 +224,9 @@ class ModelOperator:
 
     def __mlsm_output_target(self, outputs, targets):
         return outputs, targets
+
+    def __bce_output_target(self, outputs, targets):
+        return sigmoid(outputs), targets
 
     def __set_score_threshold(self, outputs, labels, threshold, key):
         if threshold == 'top':
@@ -387,11 +398,11 @@ class ModelOperator:
             thresholds.append(threshold)
 
         scores_per = 100 * scores / len(self.val_loader)
-        self.info.append(['test', [scores[0], scores[1]]])
+        self.info.append(['validation', [scores[0], scores[1]]])
 
         average_threshold = np.mean(thresholds)
-        if average_threshold > self.model.best_threshold:
-            self.model.best_threshold = average_threshold
+        self.model.best_threshold = average_threshold
+
         if write:
             curr = os.path.join(self.output_path, self.name)
             save = {'type': 'val', 'scores': scores}
@@ -419,9 +430,11 @@ class ModelOperator:
             outputs = outputs.cpu()
 
         labels = labels.detach().numpy()
-        best_threshold = find_f2score_threshold(outputs.detach().numpy(), labels, verbose=True)
-        # best_threshold = 0.5
+
+        best_threshold = self.find_threshold(outputs.detach().numpy(), labels, verbose=True)
+        # best_threshold = .5
         predictions = self.predict_with_loss_layer(outputs, best_threshold, True)
+
         h_score = hamming_score(labels, predictions)
         f1_ = f1_score(labels, predictions, average='samples')
 
@@ -512,9 +525,9 @@ class Model(object):
     @staticmethod
     def load(args, clazz, loc):
         params = np.load(loc + ".npy")
-        num_labels, best_threshold = params[0], params[1]
+        num_labels, best_threshold = int(params[0]), int(params[1])
 
-        model = clazz.models[args[0]](pretrained=False, num_classes = int(num_labels))
+        model = clazz.models[str(int(args[0]))](pretrained=False, num_classes=num_labels)
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
 
@@ -525,14 +538,14 @@ class Model(object):
 
 class VGGModel(Model):
 
-    vgg_models = {"11": models.vgg11,
-                  "11bn": models.vgg11_bn,
-                  "13": models.vgg13,
-                  "13bn": models.vgg13_bn,
-                  "16": models.vgg16,
-                  "16bn": models.vgg16_bn,
-                  "19": models.vgg19,
-                  "19bn": models.vgg19_bn}
+    models = {"11": models.vgg11,
+              "11bn": models.vgg11_bn,
+              "13": models.vgg13,
+              "13bn": models.vgg13_bn,
+              "16": models.vgg16,
+              "16bn": models.vgg16_bn,
+              "19": models.vgg19,
+              "19bn": models.vgg19_bn}
 
     def __init__(self, model, num_labels, parameters, data_set=None):
 
@@ -542,10 +555,10 @@ class VGGModel(Model):
     def init_11(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["11bn"](pretrained=pretrained)
+            model = VGGModel.models["11bn"](pretrained=pretrained)
             parameters = ["11bn"]
         else:
-            model = VGGModel.vgg_models["11"](pretrained=pretrained)
+            model = VGGModel.models["11"](pretrained=pretrained)
             parameters = ["11"]
         return VGGModel(model, num_labels, parameters, data_set)
 
@@ -553,7 +566,7 @@ class VGGModel(Model):
     def init_13(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["13bn"](pretrained=pretrained)
+            model = VGGModel.models["13bn"](pretrained=pretrained)
             parameters = ["13bn"]
         else:
             model = VGGModel.vgg_models["13"](pretrained=pretrained)
@@ -564,10 +577,10 @@ class VGGModel(Model):
     def init_16(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["16bn"](pretrained=pretrained)
+            model = VGGModel.models["16bn"](pretrained=pretrained)
             parameters = ["16bn"]
         else:
-            model = VGGModel.vgg_models["16"](pretrained=pretrained)
+            model = VGGModel.models["16"](pretrained=pretrained)
             parameters = ["16"]
         return VGGModel(model, num_labels, parameters, data_set)
 
@@ -575,7 +588,7 @@ class VGGModel(Model):
     def init_19(num_labels=1000, pretrained=True, data_set=None, **kwargs):
         batch_norm = kwargs.get("batch_norm", True)
         if batch_norm:
-            model = VGGModel.vgg_models["19bn"](pretrained=pretrained)
+            model = VGGModel.models["19bn"](pretrained=pretrained)
             parameters = ["19bn"]
         else:
             model = VGGModel.vgg_models["19"](pretrained=pretrained)
@@ -610,11 +623,11 @@ class VGGModel(Model):
 
 class ResNetModel(Model):
 
-    models = {b"18": models.resnet18,
-              b"34": models.resnet34,
-              b"50": models.resnet50,
-              b"101": models.resnet101,
-              b"152": models.resnet152}
+    models = {"18": models.resnet18,
+              "34": models.resnet34,
+              "50": models.resnet50,
+              "101": models.resnet101,
+              "152": models.resnet152}
 
     def __init__(self, model, num_labels, parameters, data_set=None):
         super(ResNetModel, self).__init__(model, num_labels, parameters, data_set)
@@ -745,7 +758,7 @@ class GoogLeNetModel(Model):
     def init_v3(num_labels=1000, pretrained=True, data_set=None):
 
         model = GoogLeNetModel.models["v3"](pretrained=pretrained)
-        parameters = [b"18"]
+        parameters = ["18"]
 
         return ResNetModel(model, num_labels, parameters, data_set)
 
