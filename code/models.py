@@ -14,8 +14,8 @@ from sklearn.metrics import f1_score
 # Train and test methods writes numpy data to outputs to be able to plot afterwards if it is wished.
 
 class ModelOperator:
-    def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True):
-
+    def __init__(self, model, model_path, output_path, name, loss='mse', cuda=True, threshold='global'):
+        self.num_workers = 1
         self.model = model
         if cuda:
             self.model.to_cuda()
@@ -152,7 +152,7 @@ class ModelOperator:
 
         self.model.adjust_last_layer(cuda=self.cuda)
         self.train_loader = torch.utils.data.DataLoader(self.model.train_data_set, batch_size=batch_size, shuffle=True,
-                                                        num_workers=4)
+                                                        num_workers=self.num_workers)
 
         self._train_batch_size = batch_size
         self._train_set_len = len(self.model.train_data_set)
@@ -161,7 +161,7 @@ class ModelOperator:
                                                       min_class, self.model.train_data_set.max_class)
 
             self.model.val_data_set.load(train_path, mode='val', data_dirs=val_dirs)
-            self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=4)
+            self.val_loader = DataLoader(self.model.val_data_set, batch_size=batch_size, shuffle=False, num_workers=self.num_workers)
 
             self._val_set_len = len(self.model.val_data_set)
             self._val_batch_size = batch_size
@@ -307,7 +307,7 @@ class ModelOperator:
 
         self.model.test_data_set.load(test_path, mode="test")
 
-        self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=4)
+        self.test_loader = DataLoader(self.model.test_data_set, batch_size=batch_size, shuffle=False, num_workers=self.num_workers)
 
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
@@ -530,7 +530,6 @@ class Model(object):
         model = clazz.models[str(int(args[0]))](pretrained=False, num_classes=num_labels)
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
-
         model_ = clazz(model, num_labels, args)
         model_.best_threshold = best_threshold
         return model_
@@ -569,7 +568,7 @@ class VGGModel(Model):
             model = VGGModel.models["13bn"](pretrained=pretrained)
             parameters = ["13bn"]
         else:
-            model = VGGModel.vgg_models["13"](pretrained=pretrained)
+            model = VGGModel.models["13"](pretrained=pretrained)
             parameters = ["13bn"]
         return VGGModel(model, num_labels, parameters, data_set)
 
@@ -591,7 +590,7 @@ class VGGModel(Model):
             model = VGGModel.models["19bn"](pretrained=pretrained)
             parameters = ["19bn"]
         else:
-            model = VGGModel.vgg_models["19"](pretrained=pretrained)
+            model = VGGModel.models["19"](pretrained=pretrained)
             parameters = ["19"]
 
         return VGGModel(model, num_labels, parameters, data_set)

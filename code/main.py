@@ -61,14 +61,54 @@ def plot_all(output_path, figure_folder, figname):
     for out in outputs:
         if out['type'] == 'train':
             try:
-                train_outs['error1'].extend([err[0] for err in out['error']])
+                train_outs['scores-hs-5'].extend([err[0] for err in out['scores']['threshold_5']])
             except KeyError:
-                train_outs['error1'] = [err[0] for err in out['error']]
+                train_outs['scores-hs-5'] = [err[0] for err in out['scores']['threshold_5']]
 
             try:
-                train_outs['error5'].extend([err[1] for err in out['error']])
+                train_outs['scores-f1-5'].extend([err[1] for err in out['scores']['threshold_5']])
             except KeyError:
-                train_outs['error5'] = [err[1] for err in out['error']]
+                train_outs['scores-f1-5'] = [err[1] for err in out['scores']['threshold_5']]
+
+            try:
+                train_outs['scores-hs-6'].extend([err[0] for err in out['scores']['threshold_6']])
+            except KeyError:
+                train_outs['scores-hs-6'] = [err[0] for err in out['scores']['threshold_6']]
+
+            try:
+                train_outs['scores-f1-6'].extend([err[1] for err in out['scores']['threshold_6']])
+            except KeyError:
+                train_outs['scores-f1-6'] = [err[1] for err in out['scores']['threshold_6']]
+
+            try:
+                train_outs['scores-hs-7'].extend([err[0] for err in out['scores']['threshold_7']])
+            except KeyError:
+                train_outs['scores-hs-7'] = [err[0] for err in out['scores']['threshold_7']]
+
+            try:
+                train_outs['scores-f1-7'].extend([err[1] for err in out['scores']['threshold_7']])
+            except KeyError:
+                train_outs['scores-f1-7'] = [err[1] for err in out['scores']['threshold_7']]
+
+            try:
+                train_outs['scores-hs-8'].extend([err[0] for err in out['scores']['threshold_8']])
+            except KeyError:
+                train_outs['scores-hs-8'] = [err[0] for err in out['scores']['threshold_8']]
+
+            try:
+                train_outs['scores-f1-8'].extend([err[1] for err in out['scores']['threshold_8']])
+            except KeyError:
+                train_outs['scores-f1-8'] = [err[1] for err in out['scores']['threshold_8']]
+
+            try:
+                train_outs['scores-hs-9'].extend([err[0] for err in out['scores']['threshold_9']])
+            except KeyError:
+                train_outs['scores-hs-9'] = [err[0] for err in out['scores']['threshold_9']]
+
+            try:
+                train_outs['scores-f1-9'].extend([err[1] for err in out['scores']['threshold_9']])
+            except KeyError:
+                train_outs['scores-f1-9'] = [err[1] for err in out['scores']['threshold_9']]
 
             try:
                 train_outs['loss'].extend([l for loss in out['loss'] for l in loss])
@@ -80,7 +120,7 @@ def plot_all(output_path, figure_folder, figname):
             except KeyError:
                 train_outs['config'] = [out['config']]
 
-        elif out['type'] == 'test':
+        elif out['type'] == 'validation':
             try:
                 test_outs['error1'].append(out['error'][0])
             except KeyError:
@@ -97,24 +137,68 @@ def plot_all(output_path, figure_folder, figname):
         test_outs[k] = np.array(test_outs[k])
 
     fig1 = plt.figure(1)
-    plt.title("Train top 1 error percentages after each epoch")
-    plt.plot(range(len(train_outs['error1'])), train_outs['error1'])
-    plt.savefig(os.path.join(figure_folder, figname) + "-train-err1.png", format='png')
+    plt.title("Threshold 0.5 Train Hamming(IoU) Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-hs-5'])), train_outs['scores-hs-5'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-hs-5.png", format='png')
 
     fig2 = plt.figure(2)
-    plt.title("Train top 5 error percentages after each epoch")
-    plt.plot(range(len(train_outs['error5'])), train_outs['error5'])
-    plt.savefig(os.path.join(figure_folder, figname) + "-train-err5.png", format='png')
+    plt.title("Threshold 0.5 Train F1 Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-f1-5'])), train_outs['scores-f1-5'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-f1-5.png", format='png')
 
-    fig3 = plt.figure(3)
-    plt.title("Test top 1 error percentages after each tranning")
-    plt.plot(range(len(test_outs['error1'])), test_outs['error1'])
-    plt.savefig(os.path.join(figure_folder, figname) + "-test-err1.png", format='png')
 
-    fig4 = plt.figure(4)
-    plt.title("Test top 5 error percentages after each tranning")
-    plt.plot(range(len(test_outs['error5'])), test_outs['error5'])
-    plt.savefig(os.path.join(figure_folder, figname) + "-test-err5.png", format='png')
+    fig10 = plt.figure(10)
+    plt.title("Threshold 0.6 Train Hamming(IoU) Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-hs-6'])), train_outs['scores-hs-6'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-hs-6.png", format='png')
+
+    fig20 = plt.figure(20)
+    plt.title("Threshold 0.6 Train F1 Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-f1-6'])), train_outs['scores-f1-6'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-f1-6.png", format='png')
+
+
+    fig11 = plt.figure(11)
+    plt.title("Threshold 0.7 Train Hamming(IoU) Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-hs-7'])), train_outs['scores-hs-7'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-hs-7.png", format='png')
+
+    fig21 = plt.figure(21)
+    plt.title("Threshold 0.7 Train F1 Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-f1-7'])), train_outs['scores-f1-7'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-f1-7.png", format='png')
+
+
+    fig12 = plt.figure(12)
+    plt.title("Threshold 0.8 Train Hamming(IoU) Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-hs-8'])), train_outs['scores-hs-8'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-hs-8.png", format='png')
+
+    fig22 = plt.figure(22)
+    plt.title("Threshold 0.8 Train F1 Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-f1-8'])), train_outs['scores-f1-8'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-f1-8.png", format='png')
+
+
+    fig13 = plt.figure(13)
+    plt.title("Threshold 0.9 Train Hamming(IoU) Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-hs-9'])), train_outs['scores-hs-9'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-hs-9.png", format='png')
+
+    fig23 = plt.figure(23)
+    plt.title("Threshold 0.9 Train F1 Scores percentages after each iter")
+    plt.plot(range(len(train_outs['scores-f1-9'])), train_outs['scores-f1-9'])
+    plt.savefig(os.path.join(figure_folder, figname) + "-train-scores-f1-9.png", format='png')
+
+    # fig3 = plt.figure(3)
+    # plt.title("Test top 1 error percentages after each tranning")
+    # plt.plot(range(len(test_outs['error1'])), test_outs['error1'])
+    # plt.savefig(os.path.join(figure_folder, figname) + "-test-err1.png", format='png')
+    #
+    # fig4 = plt.figure(4)
+    # plt.title("Test top 5 error percentages after each tranning")
+    # plt.plot(range(len(test_outs['error5'])), test_outs['error5'])
+    # plt.savefig(os.path.join(figure_folder, figname) + "-test-err5.png", format='png')
 
     fig5 = plt.figure(5, figsize=(5, 3), dpi=500)
     plt.title("Loss of the training after each iteration")
@@ -187,6 +271,7 @@ def main():
     parser.add_argument("-traindtype", type=str, default='lazy',
                         help="Type of the train datasets. subsampled or whole."
                              "Whole folder dataset. Default is -lazy"
+                             "Possible values ['lazy','default','subrandom']."
                         )
 
     parser.add_argument("-testsubsample", type=int, default=0,
@@ -200,6 +285,7 @@ def main():
 
     parser.add_argument("-optimizer", type=str, default='sgd',
                         help="Type of the optimizer, default is 'sgd' which is Stochastic Gradient Descent"
+                             "Possible values ['sgd','adam']."
                         )
 
     parser.add_argument("-test", action='store_true',
@@ -228,7 +314,7 @@ def main():
                         help="Activate it if giving directories are not made before hand.")
 
     parser.add_argument("-loss", default='mlsm',
-                        help="Loss function. Default is mse.")
+                        help="Loss function. Default is mlsm.")
 
     parser.add_argument("-batch_norm", action='store_true',
                         help="Activates batch_normalization. It can only be used when new model is initialized")
