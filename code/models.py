@@ -527,8 +527,11 @@ class Model(object):
     def load(args, clazz, loc):
         params = np.load(loc + ".npy")
         num_labels, best_threshold = int(params[0]), int(params[1])
+        __type = ''
+        if len(args)>0:
+            __type = str(int(args[0]))
 
-        model = clazz.models[str(int(args[0]))](pretrained=False, num_classes=num_labels)
+        model = clazz.models[__type](pretrained=False, num_classes=num_labels)
         pt = torch.load(loc + ".pt")
         model.load_state_dict(pt)
         model_ = clazz(model, num_labels, args)
