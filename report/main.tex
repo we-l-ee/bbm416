@@ -1,36 +1,3 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% University Assignment Title Page 
-% LaTeX Template
-% Version 1.0 (27/12/12)
-%
-% This template has been downloaded from:
-% http://www.LaTeXTemplates.com
-%
-% Original author:
-% WikiBooks (http://en.wikibooks.org/wiki/LaTeX/Title_Creation)
-%
-% License:
-% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
-% 
-% Instructions for using this template:
-% This title page is capable of being compiled as is. This is not useful for 
-% including it in another document. To do this, you have two options: 
-%
-% 1) Copy/paste everything between \begin{document} and \end{document} 
-% starting at \begin{titlepage} and paste this into another LaTeX file where you 
-% want your title page.
-% OR
-% 2) Remove everything outside the \begin{titlepage} and \end{titlepage} and 
-% move this file to the same directory as the LaTeX file you wish to add it to. 
-% Then add \input{./title_page_1.tex} to your LaTeX file where you want your
-% title page.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\title{Title page with logo}
-%----------------------------------------------------------------------------------------
-%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
-%----------------------------------------------------------------------------------------
-
 \documentclass[12pt]{article}
 \usepackage[english]{babel}
 \usepackage[utf8x]{inputenc}
@@ -117,7 +84,7 @@ Aysun Kocak
 
 \subsection{Fine-Tuning}
 
-\paragraph{}As mentioned before, fine-tuning is used for limitations and effect on this dataset.  The model used is pre-trained with ImageNet and we want to test feature extraction kernel are good enough and universal for our dataset so we thought that model probably would not need to be re-trained because dataset is not drastically different in context from the dataset which the pre-trained model is trained on so this is called fine-tuning. However our train set(1.57 GB on disk) is relatively small comparing the ImageNet, so fine-tuning the pre-trained network on a small dataset might lead to over-fitting. To discard this problem, Basic data augmentation techniques are used like rotation and flipping. We can take another approach which is to take the output of the intermediate layer prior to the fully connected layers as features (bottleneck features) and train a linear classifier such as SVM on top of it but this comes with so many parameters to tune. There are other fine-tuning methods like truncate the last layer (softmax layer) of the pre-trained network and replace it with our new loss or last layer that are relevant to our own problem. For example, pre-trained network on ImageNet comes with a softmax layer with 1000 categories so last layer is changed according to our dataset. Other one is freezing the weights of the first few layers of the pre-trained network. This is because the first few layers capture universal features like curves and edges that are also relevant to our new problem.
+\paragraph{}As mentioned before, fine-tuning is used for limitations and effect on this dataset. The model used is pre-trained with ImageNet and we want to test feature extraction kernel are good enough and universal for our dataset so we thought that model probably would not need to be re-trained because dataset is not drastically different in context from the dataset which the pre-trained model is trained on so this is called fine-tuning. However our train set(1.57 GB on disk) is relatively small comparing the ImageNet, so fine-tuning the pre-trained network on a small dataset might lead to over-fitting. To discard this problem, Basic data augmentation techniques are used like rotation and flipping. We can take another approach which is to take the output of the intermediate layer prior to the fully connected layers as features (bottleneck features) and train a linear classifier such as SVM on top of it but this comes with so many parameters to tune. There are other fine-tuning methods like truncate the last layer (softmax layer) of the pre-trained network and replace it with our new loss or last layer that are relevant to our own problem. For example, pre-trained network on ImageNet comes with a softmax layer with 1000 categories so last layer is changed according to our dataset. Other one is freezing the weights of the first few layers of the pre-trained network. This is because the first few layers capture universal features like curves and edges that are also relevant to our new problem.
 \subsection{General Approach}
 \paragraph{} CNNs and and Fully Connected Neural Networks are not completely different from each other. Abstractly, they have same steps. Those steps are feed forward data, calculate loss, back propagate with local gradients based on the loss through network. To be more precisely in training;
 
@@ -132,7 +99,7 @@ Aysun Kocak
 \paragraph{}Stochastic gradient descent is used for weight optimizations and multi label soft margin loss function is used for loss computation. For especially classification problems not regression, cross entropy is highly used. Actually, multi label soft margin loss is just combination of sigmoid function and binary cross entropy function so it fits case of our dataset because it is multi-labeled. Theoretically speaking softmax will sum up to 1 for a given input. This makes sense in the case of a single class per input, for instance the target vector sums up to 1. However, in the case of multiple labeled inputs, the output sums up to the number of labels per input. In this case, we would like to know the percentage on how likely sample has a given class. Thus, this is accomplished by a sigmoid function. Value that sigmoid gives is between 0 and 1 and those values are independent between different classes for a sample. This mean important part is it gives us a independent probabilities unlike softmax. With this setup, we may imagine having a logistic regression present at the end of deep neural network. Binary cross entropy is the one of the case of cross entropy and it used same reason with sigmoid that we want to penalize each output node independently which in the weight changes don’t get smaller and smaller and so training isn’t s likely to stall out if we are using softmax layer. However, sigmoid function can be used multi-label case.
 \subsection{Evaluation \& Scoring}
 \paragraph{}For inference which is testing and validation, sigmoid is used for as final decision layer because reason the we mentioned above. Besides, we introduce the threshold for result of the sigmoid function. It is 0.5 for default. However, to find best threshold for prediction for that time, we tried values between 0 and 1 with 0.005 incrementing and applied those values as threshold for prediction in validation time which 0.2 of training data.Then, f2 score(f beta) is calculated between target vector and thresholded predictions. Then, we picked best threshold value for the best f2 score. f2 score is weighted average of the precision and recall. We give a twice the weight to recall as opposed to precision for the sake of minimizing false negatives.   
-\paragraph{}To score validation phase, we are using hamming score and f1 score. We used hamming score because to see whether network is clueless or just misses some of the labels. Because generally accuracy term means exact match and for multi labeled case this cannot give us full insight about our predictions. In Hamming Score, we just basically calculate average intersection over union. That means for each predictions we take intersection predicted labels and target labels then divide them by union of predicted labels and target labels. Our final score is average of each prediction score. f1 score that has formula F1 = 2 * (precision * recall) / (precision + recall) is weighted average of recall and precision just like f beta. However f 2 has "beta" parameter which gives importance to one of precision and recall, and f1 score more likely gives them equal weights. 
+\paragraph{}To score validation phase, we are using hamming score and f1 score. We used hamming score because to see whether network is clueless or just misses some of the labels. Because generally accuracy term means exact match and for multi labeled case this cannot give us full insight about our predictions. In Hamming Score, we just basically calculate average of intersection over union. That means for each predictions we take intersection of predicted labels and target labels then divide them by union of predicted labels and target labels. Our final score is average of each prediction score. f1 score that has formula F1 = 2 * (precision * recall) / (precision + recall) is weighted average of recall and precision just like f beta. However f2 has "beta" parameter which gives importance to one of precision and recall, and f1 score more likely gives them equal weights. 
 \subsection{Implementation Details}
 \paragraph{}Our implementation is based on PyTorch framework for Python. Basically we build our models top of PyTorch models and wrap them with our classes. There is 2 main class that does job which is in "models" module. One is wrapper for real models of pytorch, second one operates on that wrapper class which does training, validating, testing, save model, training and testing info and loading trained model. One hot label encoding, estimated remaining time, hamming score, finding best threshold are implemented is "util" module. For data set loading, different approaches are implemented. For, randomized sub-sampled data is loaded before training phase. This would work it RAM is enough to hold sub sampled data. Whole dataset loading is implemented too, however RAM is not sufficient for big dataset. Thus, lazy loader is implemented which is data is loaded on the fly. That means just batches are loaded when they are needed. With latter approach, we are able to train VGG16 with fine-tuning. Everything can be moved to cuda if user please.
 \paragraph{} We tried to implement each possible solution by wrapping PyTorch modules even we did not use at all. For instance, different optimizers are implemented, different data loaders are implemented, every implemented model in PyTorch are implemented. Also, program starts with many optional command line arguments. This report is meant to be documentation and with "-help" option every option can be seen. However there are some restrictions. For instance, train dataset folder and train.json file must be in the same folder. It is same for test dataset, too. 
