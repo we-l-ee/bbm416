@@ -321,7 +321,7 @@ class ModelOperator:
     def __encode_label_indices(self, labels, indices, return_binary):
         preds = len(labels) * [None]
         for ind in indices:
-            index, label = ind[0], ind[1]
+            index, label = ind[0], ind[1] + 1
             if isinstance(preds[index], list):
                 preds[index].append(label)
             else:
@@ -351,18 +351,24 @@ class ModelOperator:
             outputs = self.__iter_test(i, data)
             predicts = self.predict_with_loss_layer(outputs, 0.5)
             predictions.extend(predicts)
-            ids.append(data[1])
+            ids.extend(data[1].detach().cpu().numpy())
+
 
         if write:
-            curr = os.path.join(self.output_path, self.name)
-            save = {'type': 'test', 'prediction': predictions}
-            if os.path.isfile(curr + '.npy'):
-                prev = np.load(curr + ".npy")
-                prev = prev.tolist()
-            else:
-                prev = []
-            prev.append(save)
-            np.save(curr, prev)
+            fname = os.path.join(self.output_path, self.name + '-'+'predictions.csv')
+            file = open(fname, 'w')
+            file.write('image,label\n')
+            _nl = False
+            for p, i in zip(predictions, ids):
+                if _nl:
+                    file.write("\n")
+                pstr = ''
+                if p is not None:
+                    for _p in p[:-1]:
+                        pstr += str(_p) + " "
+                    pstr += str(p[-1])
+                file.write(str(i) + "," + pstr)
+                _nl = True
 
         print("Test ended!")
         return predictions, ids
@@ -373,6 +379,9 @@ class ModelOperator:
         inputs, _ = data
 
         inputs = Variable(inputs, requires_grad=False)
+        if self.cuda:
+            inputs = Variable(inputs, requires_grad=False).cuda()
+
         outputs = self.model(inputs)
 
         self.eta.end()

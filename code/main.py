@@ -384,13 +384,14 @@ def main():
 
     if args.test:
         operator.update_test_dataset(args.ftest, args.batch, args.testdtype, args.testsubsample)
-        preds, ids = operator.test(write=True)
-        np.save("test.npy", [preds, ids])
+        operator.test(write=True)
     return model
 
 # sys.argv.extend("-train 1 -save -lr 0.01 -batch 16 -freeze -clip 0 26 -mname vgg-mse-10.32 -cuda".split())
 # sys.argv.extend("-train 10 10 10 -save -test -lr 0.01 -batch 16 -mname vgg-mse-full-3.0 -cuda".split())
-# sys.argv.extend("-test -load vgg-full-3.0 -cuda".split())
+
+# sys.argv.extend("-test -load vgg16-full-lazy-1 -ftest C:/dataset/test -testdtype lazy -cuda -batch 12".split())
+
 # sys.argv.extend("-plot -mname vgg-mse-5.0".split())
 # sys.argv.extend("-plot -mname vgg-mse-full-2.0".split())
 
