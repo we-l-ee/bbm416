@@ -313,15 +313,16 @@ class ModelOperator:
         self._test_set_len = len(self.model.test_data_set)
         self._test_batch_size = batch_size
 
-    def predict_with_loss_layer(self, predictions, threshold=0.5, return_binary=False):
+    def predict_with_loss_layer(self, predictions, threshold=0.5, return_binary=False, test=False):
         predictions = self.loss_layer_func(predictions).detach().cpu().numpy()
         indices = np.argwhere(predictions > threshold)
-        return self.__encode_label_indices(predictions, indices, return_binary)
+        return self.__encode_label_indices(predictions, indices, return_binary, test=test)
 
-    def __encode_label_indices(self, labels, indices, return_binary):
+    def __encode_label_indices(self, labels, indices, return_binary, test=False):
         preds = len(labels) * [None]
         for ind in indices:
-            index, label = ind[0], ind[1] + 1
+            index, label = ind[0], ind[1] + 1 if test else ind[1]
+
             if isinstance(preds[index], list):
                 preds[index].append(label)
             else:
@@ -349,7 +350,7 @@ class ModelOperator:
         print("Test starting...")
         for i, data in enumerate(self.test_loader):
             outputs = self.__iter_test(i, data)
-            predicts = self.predict_with_loss_layer(outputs, 0.5)
+            predicts = self.predict_with_loss_layer(outputs, 0.5, test=True)
             predictions.extend(predicts)
             ids.extend(data[1].detach().cpu().numpy())
 
