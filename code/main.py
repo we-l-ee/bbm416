@@ -7,8 +7,8 @@ import random
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
-# Volatile variables to be used in inference only. They get rid off other variables that is used in back propagation.
-#
+from time import gmtime, strftime
+
 gc.enable()
 
 
@@ -319,8 +319,8 @@ def main():
     parser.add_argument("-batch_norm", action='store_true',
                         help="Activates batch_normalization. It can only be used when new model is initialized")
 
+    print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
     random.seed(time.time())
-
     args = parser.parse_args(sys.argv[1:])
     for arg in vars(args):
         print(arg, '=', getattr(args, arg))

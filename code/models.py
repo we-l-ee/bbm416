@@ -547,8 +547,13 @@ class Model(object):
             __type = str(int(args[0]))
 
         model = clazz.models[__type](pretrained=False, num_classes=num_labels)
-        pt = torch.load(loc + ".pt")
-        model.load_state_dict(pt)
+        pt = torch.load(loc + ".pt",  map_location='cpu')
+
+        # model_dict = model.state_dict()
+        # pretrained_dict = {k: v for k, v in pt.items() if k in model_dict}
+        # model_dict.update(pretrained_dict)
+
+        model.load_state_dict(pt, strict=False)
         model_ = clazz(model, num_labels, args)
         model_.best_threshold = best_threshold
         return model_
