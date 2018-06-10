@@ -189,7 +189,7 @@ class ModelOperator:
 
         print("Training starting...")
 
-        self.eta.set_epoch(epoch + 1)
+        self.eta.set_epoch(epoch)
         self.eta.set_totiter(math.ceil(self._train_set_len / self._train_batch_size))
 
         self.model.train()
