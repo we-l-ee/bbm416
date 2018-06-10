@@ -189,16 +189,21 @@ class ModelOperator:
 
         print("Training starting...")
 
-        self.eta.set_epoch(epoch)
+        self.eta.set_epoch(epoch + 1)
         self.eta.set_totiter(math.ceil(self._train_set_len / self._train_batch_size))
 
         self.model.train()
         optimizer = self.__get_optimizer(optimizer, lr, momentum)
         losses = []
+        self.eta.start()
         for e in range(1, epoch + 1):
             e_loss = []
             for i, data in enumerate(self.train_loader):
-                self.__iter_train(e, i + 1, data, optimizer, e_loss)
+                self.eta.update(e, i+1)
+                self.eta.end()
+                eta = self.eta()
+                self.eta.start()
+                self.__iter_train(e, i + 1, data, optimizer, e_loss, eta)
             print("Epoch", e, 'completed!')
             losses.append(e_loss)
         print('Training Completed.')
@@ -215,6 +220,31 @@ class ModelOperator:
             prev.append(save)
             np.save(curr_dir, prev)
         self.info.append(['train', [epoch, self._train_batch_size, lr, momentum, losses[0][0]]])
+
+    def __iter_train(self, epoch, _iter, data, optimizer, e_loss, eta):
+
+        inputs, labels = data
+
+        inputs, targets = self.variable(inputs, labels)
+        optimizer.zero_grad()
+        outputs = self.model(inputs)
+
+        outputs, targets = self.func_target(outputs, targets)
+        loss = self.criterion(outputs, targets.detach().float())
+        loss.backward()
+
+        optimizer.step()
+
+        loss = loss.cpu()
+        loss = loss.item()
+
+        e_loss.append(loss)
+        self.__set_scores(outputs, targets)
+
+        print("Epoch %d [%d/%d (%.2f%%)]" % (
+            epoch, min(_iter * self._train_batch_size, self._train_set_len), self._train_set_len,
+            100 * _iter / self.eta.totiter), "| Loss [%.6f]" % (e_loss[-1]),
+              "ETA: %.2f min" % eta)
 
     def __mse_output_target(self, outputs, targets):
         return softmax(outputs, dim=1), targets
@@ -268,33 +298,7 @@ class ModelOperator:
         self.__set_score_threshold(outputs, labels, 0.9, 'threshold_9')
         self.__set_score_threshold(outputs_np, labels, 'top', 'top_labels')
 
-    def __iter_train(self, epoch, _iter, data, optimizer, e_loss):
-        self.eta.update(epoch, _iter)
-        self.eta.start()
-        inputs, labels = data
 
-        inputs, targets = self.variable(inputs, labels)
-        optimizer.zero_grad()
-        outputs = self.model(inputs)
-
-        outputs, targets = self.func_target(outputs, targets)
-        loss = self.criterion(outputs, targets.detach().float())
-        loss.backward()
-
-        optimizer.step()
-
-        loss = loss.cpu()
-        loss = loss.item()
-
-        e_loss.append(loss)
-        self.__set_scores(outputs, targets)
-
-        self.eta.end()
-        eta = self.eta.eta()
-        print("Epoch %d [%d/%d (%.2f%%)]" % (
-            epoch, min(_iter * self._train_batch_size, self._train_set_len), self._train_set_len,
-            100 * _iter / self.eta.totiter), "| Loss [%.6f]" % (e_loss[-1]),
-              "ETA: %.2f min" % eta)
 
     def update_test_dataset(self, test_path='test', batch_size=16, dtype='default', subsample=0):
         print("Test dataset is loading...")
@@ -348,8 +352,13 @@ class ModelOperator:
         predictions = list()
         ids = list()
         print("Test starting...")
+        self.eta.start()
         for i, data in enumerate(self.test_loader):
-            outputs = self.__iter_test(i, data)
+            self.eta.update(0, i+1)
+            self.eta.end()
+            eta = self.eta()
+            self.eta.start()
+            outputs = self.__iter_test(i+1, data, eta)
             predicts = self.predict_with_loss_layer(outputs, 0.5, test=True)
             predictions.extend(predicts)
             ids.extend(data[1].detach().cpu().numpy())
@@ -374,9 +383,7 @@ class ModelOperator:
         print("Test ended!")
         return predictions, ids
 
-    def __iter_test(self, _iter, data):
-        self.eta.update(0, _iter)
-        self.eta.start()
+    def __iter_test(self, _iter, data, eta):
         inputs, _ = data
 
         inputs = Variable(inputs, requires_grad=False)
@@ -385,8 +392,6 @@ class ModelOperator:
 
         outputs = self.model(inputs)
 
-        self.eta.end()
-        eta = self.eta.eta()
         curr_batch = min(_iter * self._test_batch_size, self._test_set_len)
 
         print("Testing... [%d/%d (%.2f%%)]" % (

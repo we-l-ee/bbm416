@@ -118,7 +118,13 @@ class ETA(object):
         self.est = 0.125 * curr + 0.875 * self.est
         return (self.est * ((self.epoch - self.ep) * self.totiter + (self.totiter - self.iter))) / 60
 
+    def __call__(self):
 
+        curr = self.e - self.s
+        self.est = 0.125 * curr + 0.875 * self.est
+        return (self.est * ((self.epoch - self.ep) * self.totiter + (self.totiter - self.iter))) / 60
+
+    
 class LabelEncoder(object):
     def __init__(self, encode=None, max_=0):
         if encode is None:
